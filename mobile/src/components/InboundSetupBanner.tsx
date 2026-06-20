@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { AlertTriangle, Settings } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 import { useSession } from "@/context/SessionContext";
+import { useTheme } from "@/context/ThemeContext";
 
 interface InboundSetupBannerProps {
   className?: string;
@@ -13,6 +14,7 @@ export function InboundSetupBanner({
   showSettingsButton = true
 }: InboundSetupBannerProps) {
   const { webhook } = useSession();
+  const { isDark } = useTheme();
 
   const message = !webhook?.url
     ? "Inbound mail is not active. Create a webhook URL to receive new messages."
@@ -31,7 +33,7 @@ export function InboundSetupBanner({
       }`}
     >
       <AlertTriangle size={18} color="#fbbf24" />
-      <Text className="min-w-0 flex-1 text-sm font-semibold leading-5 text-zinc-50">
+      <Text className={`min-w-0 flex-1 text-sm font-semibold leading-5 ${isDark ? "text-zinc-50" : "text-zinc-950"}`}>
         {message}
       </Text>
       {showSettingsButton ? (

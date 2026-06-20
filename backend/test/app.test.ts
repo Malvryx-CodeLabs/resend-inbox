@@ -148,7 +148,6 @@ describe("mail routes", () => {
       .set("authorization", `Bearer ${seeded.sessionToken}`)
       .send({
         email_id: inboundId.toHexString(),
-        from: "admin@example.com",
         text: "Answer"
       })
       .expect(201)
@@ -159,6 +158,112 @@ describe("mail routes", () => {
     expect(dependencies.resendClient.sendCalls[0].headers).toEqual({
       "In-Reply-To": "<incoming@example.net>",
       References: "<older@example.net> <incoming@example.net>"
+    });
+    expect(dependencies.resendClient.sendCalls[0].from.email).toBe("admin@example.com");
+  });
+
+  it("rejects replies from a different alias than the inbound recipient", async () => {
+    const dependencies = createTestDependencies();
+    const seeded = await seedUser(dependencies, "re_test_secret", "example.com");
+    const inboundId = new ObjectId();
+
+    await dependencies.collections.emails.insertOne({
+      _id: inboundId,
+      userId: seeded.userId,
+      domain: "example.com",
+      threadId: "thread_existing",
+      messageId: "<incoming@example.net>",
+      from: { email: "person@example.net" },
+      to: [{ email: "support@example.com" }],
+      cc: [],
+      bcc: [],
+      replyTo: [],
+      subject: "Question",
+      text: "Hi",
+      direction: "inbound",
+      headers: {},
+      attachments: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    await request(createApp(dependencies))
+      .post("/reply")
+      .set("authorization", `Bearer ${seeded.sessionToken}`)
+      .send({
+        email_id: inboundId.toHexString(),
+        from: "admin@example.com",
+        text: "Answer"
+      })
+      .expect(403);
+  });
+
+  it("replies to outbound-started threads from the original sending alias", async () => {
+    const dependencies = createTestDependencies();
+    const seeded = await seedUser(dependencies, "re_test_secret", "example.com");
+    const outboundId = new ObjectId();
+
+    await dependencies.collections.emails.insertOne({
+      _id: outboundId,
+      userId: seeded.userId,
+      domain: "example.com",
+      threadId: "thread_outbound",
+      messageId: "<outgoing@example.com>",
+      from: { email: "sales@example.com" },
+      to: [{ email: "person@example.net" }],
+      cc: [],
+      bcc: [],
+      replyTo: [],
+      subject: "Proposal",
+      text: "Hello",
+      direction: "outbound",
+      headers: {},
+      attachments: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    await request(createApp(dependencies))
+      .post("/reply")
+      .set("authorization", `Bearer ${seeded.sessionToken}`)
+      .send({
+        email_id: outboundId.toHexString(),
+        text: "Following up"
+      })
+      .expect(201);
+
+    expect(dependencies.resendClient.sendCalls[0].from.email).toBe("sales@example.com");
+    expect(dependencies.resendClient.sendCalls[0].to[0].email).toBe("person@example.net");
+  });
+
+  it("forwards outbound attachments to Resend and stores metadata", async () => {
+    const dependencies = createTestDependencies();
+    const seeded = await seedUser(dependencies, "re_test_secret", "example.com");
+
+    await request(createApp(dependencies))
+      .post("/send")
+      .set("authorization", `Bearer ${seeded.sessionToken}`)
+      .send({
+        from: "admin@example.com",
+        to: "person@example.net",
+        subject: "With file",
+        text: "See attached",
+        attachments: [
+          {
+            filename: "hello.txt",
+            content: Buffer.from("hello").toString("base64"),
+            content_type: "text/plain"
+          }
+        ]
+      })
+      .expect(201)
+      .expect(({ body }) => {
+        expect(body.data.attachments[0].filename).toBe("hello.txt");
+      });
+
+    expect(dependencies.resendClient.sendCalls[0].attachments?.[0]).toMatchObject({
+      filename: "hello.txt",
+      contentType: "text/plain"
     });
   });
 });
@@ -228,6 +333,48 @@ describe("webhook setup and delivery", () => {
     expect(dependencies.fakeCollections.emails.documents).toHaveLength(1);
     expect(dependencies.fakeCollections.emails.documents[0].userId.equals(seeded.userId)).toBe(true);
     expect(dependencies.fakeCollections.webhookConfigs.documents[0].lastReceivedAt).toBeInstanceOf(Date);
+  });
+
+  it("returns a signed download URL for inbound attachments", async () => {
+    const dependencies = createTestDependencies();
+    const seeded = await seedUser(dependencies, "re_test_secret", "example.com");
+    const inboundId = new ObjectId();
+
+    await dependencies.collections.emails.insertOne({
+      _id: inboundId,
+      userId: seeded.userId,
+      domain: "example.com",
+      threadId: "thread_existing",
+      messageId: "<incoming@example.net>",
+      resendEmailId: "recv_1",
+      from: { email: "person@example.net" },
+      to: [{ email: "support@example.com" }],
+      cc: [],
+      bcc: [],
+      replyTo: [],
+      subject: "File",
+      text: "Attached",
+      direction: "inbound",
+      headers: {},
+      attachments: [
+        {
+          id: "att_1",
+          filename: "hello.txt",
+          contentType: "text/plain",
+          size: 5
+        }
+      ],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    await request(createApp(dependencies))
+      .get(`/emails/${inboundId.toHexString()}/attachments/att_1`)
+      .set("authorization", `Bearer ${seeded.sessionToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.data.download_url).toBe("https://example.com/hello.txt");
+      });
   });
 });
 

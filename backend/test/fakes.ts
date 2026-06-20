@@ -10,6 +10,7 @@ import type {
 } from "../src/db/types.js";
 import type {
   ReceivedEmailContent,
+  ReceivedAttachmentContent,
   ResendClient,
   ResendDomain,
   SendEmailInput
@@ -156,6 +157,13 @@ export class FakeResendClient implements ResendClient {
     { id: "domain_1", name: "example.com", status: "verified" }
   ];
   receivedEmail?: ReceivedEmailContent;
+  receivedAttachment: ReceivedAttachmentContent = {
+    id: "att_1",
+    filename: "hello.txt",
+    contentType: "text/plain",
+    size: 5,
+    downloadUrl: "https://example.com/hello.txt"
+  };
   sendCalls: SendEmailInput[] = [];
 
   async listDomains(): Promise<ResendDomain[]> {
@@ -173,6 +181,10 @@ export class FakeResendClient implements ResendClient {
     }
 
     return this.receivedEmail;
+  }
+
+  async retrieveReceivedAttachment(): Promise<ReceivedAttachmentContent> {
+    return this.receivedAttachment;
   }
 }
 

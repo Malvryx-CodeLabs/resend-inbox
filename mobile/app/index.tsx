@@ -15,13 +15,19 @@ import type { WebhookSetup } from "@/api/types";
 import { Button } from "@/components/Button";
 import { Field } from "@/components/Field";
 import { StatusPill } from "@/components/StatusPill";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useSession } from "@/context/SessionContext";
+import { themed, useTheme } from "@/context/ThemeContext";
+import { useToast } from "@/context/ToastContext";
 
 type Step = "backend" | "account" | "webhook" | "done";
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const { register, prepareWebhook, saveWebhookSecret, status, domains } = useSession();
+  const { isDark } = useTheme();
+  const { showToast } = useToast();
+  const t = themed(isDark);
   const [step, setStep] = useState<Step>("backend");
   const [backendUrl, setBackendUrl] = useState(hostedBackendUrl);
   const [registrationKey, setRegistrationKey] = useState("");
@@ -86,6 +92,7 @@ export default function OnboardingScreen() {
       const setup = await saveWebhookSecret(webhookSecret);
       setWebhookSetup(setup);
       setStep("done");
+      showToast({ title: "Inbox ready", tone: "success" });
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Webhook setup failed");
     } finally {
@@ -102,6 +109,7 @@ export default function OnboardingScreen() {
     try {
       await ExpoClipboard.setStringAsync(webhookSetup.url);
       setNotice("Webhook URL copied.");
+      showToast({ title: "Webhook URL copied", tone: "success" });
     } catch {
       setError("Webhook URL could not be copied");
     }
@@ -110,7 +118,7 @@ export default function OnboardingScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-black"
+      className={`flex-1 ${t.screen}`}
     >
       <ScrollView
         contentContainerClassName="flex-grow px-6 pb-10 pt-16"
@@ -119,11 +127,14 @@ export default function OnboardingScreen() {
         <View className="flex-1 justify-between gap-10">
           <View className="gap-8">
             <View className="gap-3">
+              <View className="flex-row justify-end">
+                <ThemeToggle />
+              </View>
               <View className="h-14 w-14 items-center justify-center rounded-xl bg-pine">
                 <Server size={28} color="#000000" />
               </View>
-              <Text className="text-4xl font-black text-zinc-50">Resend Inbox</Text>
-              <Text className="text-base leading-6 text-zinc-400">
+              <Text className={`text-4xl font-black ${t.text}`}>Resend Inbox</Text>
+              <Text className={`text-base leading-6 ${t.muted}`}>
                 Connect your approved backend, verify your Resend account, then activate inbound mail.
               </Text>
             </View>
@@ -199,19 +210,19 @@ export default function OnboardingScreen() {
                   title="Activate Inbound Mail"
                   body="Add this webhook URL in Resend, then paste the webhook signing secret."
                 />
-                <View className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+                <View className={`rounded-lg border p-4 ${t.panel}`}>
                   <View className="flex-row items-center justify-between gap-3">
                     <Text className="text-xs font-bold uppercase text-zinc-500">Webhook URL</Text>
                     <Pressable
                       accessibilityRole="button"
                       onPress={handleCopyWebhookUrl}
-                      className="h-8 flex-row items-center gap-1 rounded-lg bg-zinc-900 px-2 active:bg-zinc-800"
+                      className={`h-8 flex-row items-center gap-1 rounded-lg px-2 ${isDark ? "bg-zinc-900 active:bg-zinc-800" : "bg-zinc-100 active:bg-zinc-200"}`}
                     >
                       <Copy size={14} color="#2dd4bf" />
-                      <Text className="text-xs font-black text-zinc-50">Copy</Text>
+                      <Text className={`text-xs font-black ${t.text}`}>Copy</Text>
                     </Pressable>
                   </View>
-                  <Text className="mt-2 text-sm font-semibold leading-5 text-zinc-50">
+                  <Text className={`mt-2 text-sm font-semibold leading-5 ${t.text}`}>
                     {webhookSetup?.url}
                   </Text>
                 </View>
@@ -278,13 +289,16 @@ function StepHeader({
   title: string;
   body: string;
 }) {
+  const { isDark } = useTheme();
+  const t = themed(isDark);
+
   return (
-    <View className="gap-3 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+    <View className={`gap-3 rounded-lg border p-4 ${t.panel}`}>
       <View className="flex-row items-center gap-2">
         <Icon size={18} color="#2dd4bf" />
-        <Text className="text-base font-bold text-zinc-50">{title}</Text>
+        <Text className={`text-base font-bold ${t.text}`}>{title}</Text>
       </View>
-      <Text className="text-sm leading-5 text-zinc-400">{body}</Text>
+      <Text className={`text-sm leading-5 ${t.muted}`}>{body}</Text>
     </View>
   );
 }

@@ -1,11 +1,13 @@
 import type {
   ApiItem,
   ApiList,
+  AttachmentDownload,
   CreateSessionResponse,
   EmailSummary,
   HealthResponse,
   MeResponse,
   MetaResponse,
+  OutboundAttachment,
   ThreadSummary,
   WebhookSetup
 } from "./types";
@@ -116,6 +118,14 @@ export function createInboxClient(baseUrl: string, sessionToken: string) {
       request<ApiItem<EmailSummary>>(baseUrl, `/emails/${encodeURIComponent(id)}`, {
         sessionToken
       }),
+    getAttachmentDownload: (emailId: string, attachmentId: string) =>
+      request<ApiItem<AttachmentDownload>>(
+        baseUrl,
+        `/emails/${encodeURIComponent(emailId)}/attachments/${encodeURIComponent(attachmentId)}`,
+        {
+          sessionToken
+        }
+      ),
     listThreads: () =>
       request<ApiList<ThreadSummary>>(baseUrl, "/threads", {
         sessionToken
@@ -131,13 +141,19 @@ export function createInboxClient(baseUrl: string, sessionToken: string) {
       to: string;
       subject: string;
       text: string;
+      attachments?: OutboundAttachment[];
     }) =>
       request<{ id: string; data: EmailSummary }>(baseUrl, "/send", {
         method: "POST",
         sessionToken,
         body: payload
       }),
-    reply: (payload: { email_id: string; from: string; text: string }) =>
+    reply: (payload: {
+      email_id: string;
+      from?: string;
+      text: string;
+      attachments?: OutboundAttachment[];
+    }) =>
       request<{ id: string; data: EmailSummary }>(baseUrl, "/reply", {
         method: "POST",
         sessionToken,

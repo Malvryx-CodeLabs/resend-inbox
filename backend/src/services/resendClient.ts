@@ -19,6 +19,17 @@ const resendSendResponseSchema = z.object({
   id: z.string()
 });
 
+const resendAttachmentSchema = z.object({
+  id: z.string(),
+  filename: z.string().optional(),
+  size: z.number().optional(),
+  content_type: z.string().optional(),
+  content_disposition: z.string().optional(),
+  content_id: z.string().optional(),
+  download_url: z.string().url(),
+  expires_at: z.string().optional()
+});
+
 const resendReceivedEmailSchema = z
   .object({
     id: z.string(),
@@ -83,6 +94,7 @@ export interface SendEmailInput {
   html?: string;
   text?: string;
   headers?: Record<string, string>;
+  attachments?: AttachmentMetadata[];
 }
 
 export interface ReceivedEmailContent {
@@ -101,10 +113,20 @@ export interface ReceivedEmailContent {
   createdAt?: Date;
 }
 
+export interface ReceivedAttachmentContent extends AttachmentMetadata {
+  downloadUrl: string;
+  expiresAt?: Date;
+}
+
 export interface ResendClient {
   listDomains(apiKey: string): Promise<ResendDomain[]>;
   sendEmail(input: SendEmailInput): Promise<{ id: string }>;
   retrieveReceivedEmail(apiKey: string, emailId: string): Promise<ReceivedEmailContent>;
+  retrieveReceivedAttachment(
+    apiKey: string,
+    emailId: string,
+    attachmentId: string
+  ): Promise<ReceivedAttachmentContent>;
 }
 
 export class HttpResendClient implements ResendClient {
@@ -148,7 +170,14 @@ export class HttpResendClient implements ResendClient {
         subject: input.subject,
         html: input.html,
         text: input.text,
-        headers: input.headers
+        headers: input.headers,
+        attachments: input.attachments?.map((attachment) => ({
+          filename: attachment.filename,
+          content: attachment.content,
+          content_type: attachment.contentType,
+          content_id: attachment.contentId,
+          disposition: attachment.disposition
+        }))
       })
     });
 
@@ -200,6 +229,39 @@ export class HttpResendClient implements ResendClient {
           size: attachment.size
         })) ?? [],
       createdAt: parsed.created_at ? new Date(parsed.created_at) : undefined
+    };
+  }
+
+  async retrieveReceivedAttachment(
+    apiKey: string,
+    emailId: string,
+    attachmentId: string
+  ): Promise<ReceivedAttachmentContent> {
+    const response = await this.fetchImpl(
+      `${this.baseUrl}/emails/receiving/${emailId}/attachments/${attachmentId}`,
+      {
+        headers: this.authHeaders(apiKey)
+      }
+    );
+
+    const body = await this.parseJson(response);
+
+    if (!response.ok) {
+      throw badRequest(`Resend attachment retrieval failed: ${this.errorMessage(body)}`);
+    }
+
+    const parsed = resendAttachmentSchema.parse(body);
+
+    return {
+      id: parsed.id,
+      filename: parsed.filename,
+      contentType: parsed.content_type,
+      contentId: parsed.content_id,
+      disposition:
+        parsed.content_disposition === "inline" ? "inline" : "attachment",
+      size: parsed.size,
+      downloadUrl: parsed.download_url,
+      expiresAt: parsed.expires_at ? new Date(parsed.expires_at) : undefined
     };
   }
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Animated,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -25,7 +26,10 @@ import { DomainBadge } from "@/components/DomainBadge";
 import { Field } from "@/components/Field";
 import { InboundSetupBanner } from "@/components/InboundSetupBanner";
 import { StatusPill } from "@/components/StatusPill";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useSession } from "@/context/SessionContext";
+import { themed, useTheme } from "@/context/ThemeContext";
+import { useToast } from "@/context/ToastContext";
 
 export default function SettingsScreen() {
   const {
@@ -41,6 +45,9 @@ export default function SettingsScreen() {
     reset,
     deleteAccount
   } = useSession();
+  const { isDark } = useTheme();
+  const { showToast } = useToast();
+  const t = themed(isDark);
   const [backendInput, setBackendInput] = useState(backendUrl ?? "");
   const [webhookSecret, setWebhookSecret] = useState("");
   const [checking, setChecking] = useState(false);
@@ -79,6 +86,7 @@ export default function SettingsScreen() {
     try {
       await prepareWebhook();
       setNotice("Webhook URL is ready.");
+      showToast({ title: "Webhook URL ready", tone: "success" });
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Webhook setup failed");
     } finally {
@@ -95,6 +103,7 @@ export default function SettingsScreen() {
       await saveWebhookSecret(webhookSecret);
       setWebhookSecret("");
       setNotice("Webhook signing secret saved.");
+      showToast({ title: "Webhook secret saved", tone: "success" });
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Webhook secret failed");
     } finally {
@@ -110,6 +119,7 @@ export default function SettingsScreen() {
     try {
       await updateBackend(backendInput);
       setNotice("Backend URL saved.");
+      showToast({ title: "Backend URL saved", tone: "success" });
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Backend update failed");
     } finally {
@@ -143,6 +153,7 @@ export default function SettingsScreen() {
     try {
       await ExpoClipboard.setStringAsync(webhook.url);
       setNotice("Webhook URL copied.");
+      showToast({ title: "Webhook URL copied", tone: "success" });
     } catch {
       setError("Webhook URL could not be copied");
     }
@@ -167,22 +178,25 @@ export default function SettingsScreen() {
   }
 
   return (
-    <View className="flex-1 bg-black">
-      <ScrollView className="flex-1 bg-black" contentContainerClassName="gap-6 px-5 pb-10 pt-16">
-        <View>
-          <Text className="text-3xl font-black text-zinc-50">Settings</Text>
-          <Text className="mt-1 text-sm text-zinc-400">
-            Resend Inbox by Malvryx-CodeLabs
-          </Text>
+    <View className={`flex-1 ${t.screen}`}>
+      <ScrollView className={`flex-1 ${t.screen}`} contentContainerClassName="gap-6 px-5 pb-10 pt-16">
+        <View className="flex-row items-start justify-between gap-4">
+          <View className="min-w-0 flex-1">
+            <Text className={`text-3xl font-black ${t.text}`}>Settings</Text>
+            <Text className={`mt-1 text-sm ${t.muted}`}>
+              Resend Inbox by Malvryx-CodeLabs
+            </Text>
+          </View>
+          <ThemeToggle />
         </View>
 
         <InboundSetupBanner showSettingsButton={false} />
 
-        <View className="gap-3 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+        <View className={`gap-3 rounded-lg border p-4 ${t.panel}`}>
           <View className="flex-row items-center justify-between gap-3">
             <View className="min-w-0 flex-1">
-              <Text className="text-base font-bold text-zinc-50">Backend</Text>
-              <Text className="text-sm text-zinc-400" numberOfLines={1}>
+              <Text className={`text-base font-bold ${t.text}`}>Backend</Text>
+              <Text className={`text-sm ${t.muted}`} numberOfLines={1}>
                 {backendUrl}
               </Text>
             </View>
@@ -192,7 +206,7 @@ export default function SettingsScreen() {
             />
           </View>
           {backendState?.health ? (
-            <Text className="text-sm text-zinc-400">
+            <Text className={`text-sm ${t.muted}`}>
               Version {backendState.health.version}
             </Text>
           ) : null}
@@ -205,8 +219,8 @@ export default function SettingsScreen() {
           />
         </View>
 
-        <View className="gap-3 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-          <Text className="text-base font-bold text-zinc-50">Change Backend URL</Text>
+        <View className={`gap-3 rounded-lg border p-4 ${t.panel}`}>
+          <Text className={`text-base font-bold ${t.text}`}>Change Backend URL</Text>
           <Field
             label="Backend URL"
             value={backendInput}
@@ -221,9 +235,9 @@ export default function SettingsScreen() {
           />
         </View>
 
-        <View className="gap-3 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-          <Text className="text-base font-bold text-zinc-50">Security</Text>
-          <Text className="text-sm text-zinc-400">
+        <View className={`gap-3 rounded-lg border p-4 ${t.panel}`}>
+          <Text className={`text-base font-bold ${t.text}`}>Security</Text>
+          <Text className={`text-sm ${t.muted}`}>
             Resend key: {apiKeyDisplay ?? "Not available"}
           </Text>
           <View className="flex-row items-center gap-2">
@@ -234,11 +248,11 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <View className="gap-3 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+        <View className={`gap-3 rounded-lg border p-4 ${t.panel}`}>
           <View className="flex-row items-center justify-between gap-3">
             <View className="min-w-0 flex-1">
-              <Text className="text-base font-bold text-zinc-50">Inbound Webhook</Text>
-              <Text className="text-sm text-zinc-400">
+              <Text className={`text-base font-bold ${t.text}`}>Inbound Webhook</Text>
+              <Text className={`text-sm ${t.muted}`}>
                 {webhook?.configured ? "Configured" : "Setup required"}
               </Text>
             </View>
@@ -250,15 +264,15 @@ export default function SettingsScreen() {
           <Pressable
             accessibilityRole="button"
             onPress={() => setHelpOpen(true)}
-            className="flex-row items-center gap-2 self-start rounded-lg border border-zinc-800 px-3 py-2 active:bg-zinc-900"
+            className={`flex-row items-center gap-2 self-start rounded-lg border px-3 py-2 ${t.border} ${t.active}`}
           >
             <HelpCircle size={15} color="#2dd4bf" />
-            <Text className="text-sm font-semibold text-zinc-50">
+            <Text className={`text-sm font-semibold ${t.text}`}>
               Don't know how to set up webhook?
             </Text>
           </Pressable>
           {webhook?.url ? (
-            <View className="rounded-lg border border-zinc-800 bg-black p-3">
+            <View className={`rounded-lg border p-3 ${t.panelAlt}`}>
               <View className="flex-row items-center justify-between gap-3">
                 <Text className="text-xs font-bold uppercase text-zinc-500">Webhook URL</Text>
                 <Pressable
@@ -270,13 +284,13 @@ export default function SettingsScreen() {
                   <Text className="text-xs font-black text-zinc-50">Copy</Text>
                 </Pressable>
               </View>
-              <Text className="mt-2 text-sm font-semibold leading-5 text-zinc-50" selectable>
+              <Text className={`mt-2 text-sm font-semibold leading-5 ${t.text}`} selectable>
                 {webhook.url}
               </Text>
             </View>
           ) : null}
           {webhook?.last_received_at ? (
-            <Text className="text-sm text-zinc-400">
+            <Text className={`text-sm ${t.muted}`}>
               Last inbound event: {new Date(webhook.last_received_at).toLocaleString()}
             </Text>
           ) : null}
@@ -304,7 +318,7 @@ export default function SettingsScreen() {
         </View>
 
         <View className="gap-3">
-          <Text className="text-base font-bold text-zinc-50">Domains</Text>
+          <Text className={`text-base font-bold ${t.text}`}>Domains</Text>
           {domains.map((domain) => (
             <DomainBadge key={domain.id} domain={domain} />
           ))}
@@ -322,6 +336,14 @@ export default function SettingsScreen() {
         ) : null}
 
         <Button label="Sign out on this device" icon={LogOut} variant="ghost" onPress={confirmReset} />
+        <Button
+          label="Support developer"
+          icon={HelpCircle}
+          variant="secondary"
+          onPress={() => {
+            void Linking.openURL("https://github.com/Malvryx-CodeLabs/support");
+          }}
+        />
         <Button label="Delete server account" icon={Trash2} variant="danger" onPress={confirmDeleteAccount} />
       </ScrollView>
 
@@ -408,7 +430,7 @@ function WebhookHelpModal({
             {[
               "Open Resend Dashboard and go to Webhooks.",
               "Create a new endpoint and paste your webhook URL.",
-              "Select the inbound email event for the domains you use.",
+              "Select the email.received event for the domains you use.",
               "Create the endpoint, then reveal and copy its signing secret.",
               "Return here, paste the signing secret, and save."
             ].map((step, index) => (

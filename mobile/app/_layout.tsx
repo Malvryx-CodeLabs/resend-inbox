@@ -1,20 +1,26 @@
 import "react-native-gesture-handler";
 import "@/../global.css";
-import { Slot, SplashScreen, useRouter, useSegments } from "expo-router";
+import { SplashScreen, Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SessionProvider, useSession } from "@/context/SessionContext";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
+import { ToastProvider } from "@/context/ToastContext";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SessionProvider>
-        <AuthGate />
-        <StatusBar style="light" />
-      </SessionProvider>
+      <ThemeProvider>
+        <SessionProvider>
+          <ToastProvider>
+            <AuthGate />
+            <ThemedStatusBar />
+          </ToastProvider>
+        </SessionProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }
@@ -44,5 +50,28 @@ function AuthGate() {
     }
   }, [router, segments, status]);
 
-  return <Slot />;
+  return <AnimatedRoutes />;
+}
+
+function AnimatedRoutes() {
+  const { isDark } = useTheme();
+
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: "ios_from_right",
+        animationDuration: 180,
+        contentStyle: {
+          backgroundColor: isDark ? "#000000" : "#fafafa"
+        }
+      }}
+    />
+  );
+}
+
+function ThemedStatusBar() {
+  const { isDark } = useTheme();
+
+  return <StatusBar style={isDark ? "light" : "dark"} />;
 }

@@ -36,7 +36,7 @@ bower_components
 
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
-
+mobile/android/
 # Dependency directories
 node_modules/
 jspm_packages/
@@ -146,3 +146,15 @@ vite.config.ts.timestamp-*
 AGENT.md
 APP.md
 BACKEND.md
+
+# Android signing and local build secrets
+/.gradle/
+mobile/.gradle/
+mobile/android/.gradle/
+mobile/android/**/build/
+mobile/android/key.properties
+mobile/android/*.keystore
+mobile/android/*.jks
+mobile/android/app/*.keystore
+mobile/android/app/*.jks
+mobile/android/app/google-services.json

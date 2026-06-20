@@ -67,6 +67,57 @@ export function inboxRouter(dependencies: AppDependencies): Router {
     }
   });
 
+  router.get("/emails/:id/attachments/:attachmentId", auth, async (request, response, next) => {
+    try {
+      if (!ObjectId.isValid(request.params.id)) {
+        throw badRequest("Invalid email id");
+      }
+
+      const email = await findEmailForUser(
+        dependencies.collections,
+        request.auth!.user._id,
+        new ObjectId(request.params.id)
+      );
+
+      if (!email) {
+        throw notFound("Email not found");
+      }
+
+      if (!email.resendEmailId || email.direction !== "inbound") {
+        throw badRequest("Attachment download is only available for inbound emails");
+      }
+
+      const attachment = email.attachments.find(
+        (item) => item.id === request.params.attachmentId
+      );
+
+      if (!attachment?.id) {
+        throw notFound("Attachment not found");
+      }
+
+      const retrieved = await dependencies.resendClient.retrieveReceivedAttachment(
+        request.auth!.apiKey,
+        email.resendEmailId,
+        attachment.id
+      );
+
+      response.json({
+        data: {
+          id: retrieved.id,
+          filename: retrieved.filename,
+          content_type: retrieved.contentType,
+          content_id: retrieved.contentId,
+          content_disposition: retrieved.disposition,
+          size: retrieved.size,
+          download_url: retrieved.downloadUrl,
+          expires_at: retrieved.expiresAt?.toISOString() ?? null
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.get("/threads", auth, async (request, response, next) => {
     try {
       const query = listThreadsQuerySchema.parse(request.query);

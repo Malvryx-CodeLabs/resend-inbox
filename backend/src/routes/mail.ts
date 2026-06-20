@@ -31,7 +31,17 @@ const sendSchema = z
     reply_to: z.union([emailAddressSchema, z.array(emailAddressSchema)]).optional(),
     subject: z.string().trim().min(1).max(998),
     html: z.string().min(1).optional(),
-    text: z.string().min(1).optional()
+    text: z.string().min(1).optional(),
+    attachments: z
+      .array(
+        z.object({
+          filename: z.string().trim().min(1).max(255),
+          content: z.string().min(1),
+          content_type: z.string().trim().min(1).max(255).optional()
+        })
+      )
+      .max(10)
+      .optional()
   })
   .refine((value) => value.html || value.text, {
     message: "Either html or text is required",
@@ -42,9 +52,19 @@ const replySchema = z
   .object({
     email_id: z.string().optional(),
     thread_id: z.string().optional(),
-    from: emailAddressSchema,
+    from: emailAddressSchema.optional(),
     html: z.string().min(1).optional(),
-    text: z.string().min(1).optional()
+    text: z.string().min(1).optional(),
+    attachments: z
+      .array(
+        z.object({
+          filename: z.string().trim().min(1).max(255),
+          content: z.string().min(1),
+          content_type: z.string().trim().min(1).max(255).optional()
+        })
+      )
+      .max(10)
+      .optional()
   })
   .refine((value) => value.email_id || value.thread_id, {
     message: "email_id or thread_id is required",
@@ -69,6 +89,7 @@ export function mailRouter(dependencies: AppDependencies): Router {
       const bcc = normalizeEmailAddresses(body.bcc);
       const replyTo = normalizeEmailAddresses(body.reply_to);
       const domain = getDomainFromEmail(from.email);
+      const attachments = normalizeSendAttachments(body.attachments);
 
       await assertOwnedDomain(dependencies, userId, domain);
       await enforceSendRateLimit(
@@ -86,7 +107,8 @@ export function mailRouter(dependencies: AppDependencies): Router {
         replyTo,
         subject: body.subject,
         html: body.html,
-        text: body.text
+        text: body.text,
+        attachments
       });
       const now = new Date();
       const threadId = createThreadId(body.subject, [
@@ -110,7 +132,7 @@ export function mailRouter(dependencies: AppDependencies): Router {
         text: body.text,
         direction: "outbound",
         headers: {},
-        attachments: [],
+        attachments,
         createdAt: now,
         updatedAt: now
       };
@@ -130,8 +152,10 @@ export function mailRouter(dependencies: AppDependencies): Router {
     try {
       const body = replySchema.parse(request.body);
       const userId = request.auth!.user._id;
-      const from = normalizeEmailAddress(body.from);
-      const domain = getDomainFromEmail(from.email);
+      const context = await resolveReplyContext(dependencies, userId, body);
+      const replyEnvelope = resolveReplyEnvelope(context, body.from);
+      const domain = getDomainFromEmail(replyEnvelope.from.email);
+      const attachments = normalizeSendAttachments(body.attachments);
 
       await assertOwnedDomain(dependencies, userId, domain);
       await enforceSendRateLimit(
@@ -140,7 +164,6 @@ export function mailRouter(dependencies: AppDependencies): Router {
         userId
       );
 
-      const context = await resolveReplyContext(dependencies, userId, body);
       const references = [
         ...parseReferences(context.headers),
         context.messageId
@@ -155,15 +178,16 @@ export function mailRouter(dependencies: AppDependencies): Router {
 
       const resendResult = await dependencies.resendClient.sendEmail({
         apiKey: request.auth!.apiKey,
-        from,
-        to: [context.from],
-        cc: [],
+        from: replyEnvelope.from,
+        to: replyEnvelope.to,
+        cc: replyEnvelope.cc,
         bcc: [],
         replyTo: [],
         subject,
         html: body.html,
         text: body.text,
-        headers
+        headers,
+        attachments
       });
       const now = new Date();
       const email: EmailDocument = {
@@ -173,9 +197,9 @@ export function mailRouter(dependencies: AppDependencies): Router {
         threadId: context.threadId,
         messageId: resendResult.id,
         resendEmailId: resendResult.id,
-        from,
-        to: [context.from],
-        cc: [],
+        from: replyEnvelope.from,
+        to: replyEnvelope.to,
+        cc: replyEnvelope.cc,
         bcc: [],
         replyTo: [],
         subject,
@@ -183,7 +207,7 @@ export function mailRouter(dependencies: AppDependencies): Router {
         text: body.text,
         direction: "outbound",
         headers,
-        attachments: [],
+        attachments,
         createdAt: now,
         updatedAt: now
       };
@@ -200,6 +224,54 @@ export function mailRouter(dependencies: AppDependencies): Router {
   });
 
   return router;
+}
+
+function normalizeSendAttachments(
+  attachments:
+    | Array<{ filename: string; content: string; content_type?: string }>
+    | undefined
+) {
+  return (
+    attachments?.map((attachment) => ({
+      filename: attachment.filename,
+      content: attachment.content,
+      contentType: attachment.content_type,
+      size: Buffer.byteLength(attachment.content, "base64")
+    })) ?? []
+  );
+}
+
+function resolveReplyEnvelope(
+  context: EmailDocument,
+  requestedFrom: z.infer<typeof replySchema>["from"]
+) {
+  const fromAddress = context.direction === "inbound" ? context.to[0] : context.from;
+  const recipients = context.direction === "inbound" ? [context.from] : context.to;
+  const cc = context.direction === "outbound" ? context.cc : [];
+
+  if (!fromAddress?.email) {
+    throw badRequest("Reply sender could not be resolved from the thread");
+  }
+
+  if (recipients.length === 0) {
+    throw badRequest("Reply recipient could not be resolved from the thread");
+  }
+
+  const from = normalizeEmailAddress(fromAddress);
+
+  if (requestedFrom) {
+    const requested = normalizeEmailAddress(requestedFrom);
+
+    if (requested.email !== from.email) {
+      throw forbidden("Replies must use the alias already tied to the thread");
+    }
+  }
+
+  return {
+    from,
+    to: recipients.map(normalizeEmailAddress),
+    cc: cc.map(normalizeEmailAddress)
+  };
 }
 
 async function assertOwnedDomain(

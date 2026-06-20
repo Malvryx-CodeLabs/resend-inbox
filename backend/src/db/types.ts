@@ -32,6 +32,9 @@ export interface AttachmentMetadata {
   filename?: string;
   contentType?: string;
   size?: number;
+  content?: string;
+  contentId?: string;
+  disposition?: "attachment" | "inline";
 }
 
 export interface EmailDocument {

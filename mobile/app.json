@@ -6,14 +6,14 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "resend-inbox",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "dev.resendInbox.mobile"
+      "bundleIdentifier": "com.malvryx.resendinbox"
     },
     "android": {
-      "package": "dev.resendinbox.mobile",
+      "package": "com.malvryx.resendinbox",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
@@ -29,10 +29,16 @@
       "expo-router",
       "expo-secure-store",
       [
-        "expo-notifications",
+        "expo-splash-screen",
         {
-          "icon": "./assets/notification-icon.png",
-          "color": "#2dd4bf"
+          "image": "./assets/splash.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#000000",
+          "dark": {
+            "image": "./assets/splash.png",
+            "backgroundColor": "#000000"
+          }
         }
       ]
     ],

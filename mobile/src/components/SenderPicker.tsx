@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import type { DomainSummary } from "@/api/types";
 import { Field } from "@/components/Field";
+import { useTheme } from "@/context/ThemeContext";
 import {
   buildAliasAddress,
   commonAliasLocalParts,
@@ -26,6 +27,7 @@ export function SenderPicker({
   onDomainChange,
   compact = false
 }: SenderPickerProps) {
+  const { isDark } = useTheme();
   const verifiedDomains = useMemo(
     () => domains.filter((item) => item.verified).map((item) => item.domain),
     [domains]
@@ -52,7 +54,7 @@ export function SenderPicker({
   return (
     <View className={compact ? "gap-3" : "gap-4"}>
       <View className="gap-2">
-        <Text className="text-sm font-semibold text-zinc-50">Common aliases</Text>
+        <Text className={`text-sm font-semibold ${isDark ? "text-zinc-50" : "text-zinc-950"}`}>Common aliases</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View className="flex-row gap-2">
             {commonAliasLocalParts.map((option) => {
@@ -66,7 +68,9 @@ export function SenderPicker({
                   className={`rounded-lg border px-3 py-2 ${
                     active
                       ? "border-pine bg-pine"
-                      : "border-zinc-800 bg-zinc-950 active:bg-zinc-900"
+                      : isDark
+                        ? "border-zinc-800 bg-zinc-950 active:bg-zinc-900"
+                        : "border-zinc-200 bg-white active:bg-zinc-100"
                   }`}
                 >
                   <Text
@@ -93,7 +97,7 @@ export function SenderPicker({
       />
 
       <View className="gap-2">
-        <Text className="text-sm font-semibold text-zinc-50">Domain</Text>
+        <Text className={`text-sm font-semibold ${isDark ? "text-zinc-50" : "text-zinc-950"}`}>Domain</Text>
         {verifiedDomains.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View className="flex-row gap-2">
@@ -108,7 +112,9 @@ export function SenderPicker({
                     className={`rounded-lg border px-3 py-2 ${
                       active
                         ? "border-pine bg-pine"
-                        : "border-zinc-800 bg-zinc-950 active:bg-zinc-900"
+                        : isDark
+                          ? "border-zinc-800 bg-zinc-950 active:bg-zinc-900"
+                          : "border-zinc-200 bg-white active:bg-zinc-100"
                     }`}
                   >
                     <Text
@@ -133,9 +139,9 @@ export function SenderPicker({
       </View>
 
       {address ? (
-        <View className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2">
+        <View className={`rounded-lg border px-3 py-2 ${isDark ? "border-zinc-800 bg-zinc-950" : "border-zinc-200 bg-white"}`}>
           <Text className="text-xs font-bold uppercase text-zinc-500">From</Text>
-          <Text className="mt-1 text-sm font-semibold text-zinc-50">{address}</Text>
+          <Text className={`mt-1 text-sm font-semibold ${isDark ? "text-zinc-50" : "text-zinc-950"}`}>{address}</Text>
         </View>
       ) : null}
     </View>

@@ -82,8 +82,26 @@ export interface EmailSummary {
     filename?: string;
     contentType?: string;
     size?: number;
+    content?: string;
   }>;
   created_at: string;
+}
+
+export interface OutboundAttachment {
+  filename: string;
+  content: string;
+  content_type?: string;
+}
+
+export interface AttachmentDownload {
+  id: string;
+  filename?: string;
+  content_type?: string;
+  content_id?: string;
+  content_disposition?: string;
+  size?: number;
+  download_url: string;
+  expires_at: string | null;
 }
 
 export interface ThreadSummary {
