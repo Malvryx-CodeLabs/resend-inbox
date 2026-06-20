@@ -7,7 +7,9 @@ import {
   Text,
   View
 } from "react-native";
-import { CheckCircle2, Clipboard, KeyRound, Link2, Server } from "lucide-react-native";
+import * as ExpoClipboard from "expo-clipboard";
+import { useRouter } from "expo-router";
+import { CheckCircle2, Clipboard, Copy, KeyRound, Link2, Server } from "lucide-react-native";
 import { checkBackend, hostedBackendUrl } from "@/api/client";
 import type { WebhookSetup } from "@/api/types";
 import { Button } from "@/components/Button";
@@ -18,6 +20,7 @@ import { useSession } from "@/context/SessionContext";
 type Step = "backend" | "account" | "webhook" | "done";
 
 export default function OnboardingScreen() {
+  const router = useRouter();
   const { register, prepareWebhook, saveWebhookSecret, status, domains } = useSession();
   const [step, setStep] = useState<Step>("backend");
   const [backendUrl, setBackendUrl] = useState(hostedBackendUrl);
@@ -25,6 +28,7 @@ export default function OnboardingScreen() {
   const [apiKey, setApiKey] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
   const [webhookSetup, setWebhookSetup] = useState<WebhookSetup | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +40,7 @@ export default function OnboardingScreen() {
   async function handleBackendCheck() {
     setLoading(true);
     setError(null);
+    setNotice(null);
 
     try {
       await checkBackend(backendUrl);
@@ -54,6 +59,7 @@ export default function OnboardingScreen() {
   async function handleRegister() {
     setLoading(true);
     setError(null);
+    setNotice(null);
 
     try {
       await register({
@@ -74,6 +80,7 @@ export default function OnboardingScreen() {
   async function handleSaveWebhook() {
     setLoading(true);
     setError(null);
+    setNotice(null);
 
     try {
       const setup = await saveWebhookSecret(webhookSecret);
@@ -83,6 +90,20 @@ export default function OnboardingScreen() {
       setError(nextError instanceof Error ? nextError.message : "Webhook setup failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCopyWebhookUrl() {
+    if (!webhookSetup?.url) {
+      return;
+    }
+
+    setError(null);
+    try {
+      await ExpoClipboard.setStringAsync(webhookSetup.url);
+      setNotice("Webhook URL copied.");
+    } catch {
+      setError("Webhook URL could not be copied");
     }
   }
 
@@ -179,7 +200,17 @@ export default function OnboardingScreen() {
                   body="Add this webhook URL in Resend, then paste the webhook signing secret."
                 />
                 <View className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-                  <Text className="text-xs font-bold uppercase text-zinc-500">Webhook URL</Text>
+                  <View className="flex-row items-center justify-between gap-3">
+                    <Text className="text-xs font-bold uppercase text-zinc-500">Webhook URL</Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={handleCopyWebhookUrl}
+                      className="h-8 flex-row items-center gap-1 rounded-lg bg-zinc-900 px-2 active:bg-zinc-800"
+                    >
+                      <Copy size={14} color="#2dd4bf" />
+                      <Text className="text-xs font-black text-zinc-50">Copy</Text>
+                    </Pressable>
+                  </View>
                   <Text className="mt-2 text-sm font-semibold leading-5 text-zinc-50">
                     {webhookSetup?.url}
                   </Text>
@@ -209,10 +240,19 @@ export default function OnboardingScreen() {
                   title="Inbox Ready"
                   body={`${domains.length} domain${domains.length === 1 ? "" : "s"} synced. Sending and inbound mail are ready.`}
                 />
-                <Button label="Open inbox" icon={CheckCircle2} onPress={() => {}} />
+                <Button
+                  label="Open inbox"
+                  icon={CheckCircle2}
+                  onPress={() => router.replace("/(tabs)")}
+                />
               </View>
             ) : null}
 
+            {notice ? (
+              <View className="rounded-lg border border-emerald-900 bg-emerald-950 px-4 py-3">
+                <Text className="text-sm font-semibold text-pine">{notice}</Text>
+              </View>
+            ) : null}
             {error ? (
               <View className="rounded-lg border border-red-900 bg-red-950 px-4 py-3">
                 <Text className="text-sm font-semibold text-flame">{error}</Text>

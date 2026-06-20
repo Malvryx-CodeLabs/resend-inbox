@@ -1,5 +1,16 @@
 import type { EmailAddress, EmailSummary } from "@/api/types";
 
+export const commonAliasLocalParts = [
+  "hello",
+  "support",
+  "admin",
+  "team",
+  "contact",
+  "help",
+  "sales",
+  "billing"
+];
+
 export function addressLabel(address?: EmailAddress): string {
   if (!address) {
     return "Unknown sender";
@@ -19,6 +30,25 @@ export function aliasOptions(domains: string[]): string[] {
     `support@${domain}`,
     `hello@${domain}`
   ]);
+}
+
+export function normalizeAliasLocalPart(value: string): string {
+  return value.trim().replace(/^@+/, "").replace(/@.*$/, "");
+}
+
+export function isValidAliasLocalPart(value: string): boolean {
+  return /^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/i.test(value.trim());
+}
+
+export function buildAliasAddress(localPart: string, domain: string): string {
+  const normalizedLocalPart = normalizeAliasLocalPart(localPart);
+  const normalizedDomain = domain.trim();
+
+  if (!normalizedLocalPart || !normalizedDomain) {
+    return "";
+  }
+
+  return `${normalizedLocalPart}@${normalizedDomain}`;
 }
 
 export function detectOtp(value: string | undefined): string | null {

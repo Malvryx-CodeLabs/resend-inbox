@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -15,9 +15,17 @@ import { ArrowLeft, Reply, ShieldCheck } from "lucide-react-native";
 import type { EmailSummary } from "@/api/types";
 import { Button } from "@/components/Button";
 import { Field } from "@/components/Field";
+import { InboundSetupBanner } from "@/components/InboundSetupBanner";
+import { SenderPicker } from "@/components/SenderPicker";
 import { useSession } from "@/context/SessionContext";
 import { formatLongDate } from "@/utils/date";
-import { addressLabel, aliasOptions, detectOtp, previewText } from "@/utils/email";
+import {
+  addressLabel,
+  buildAliasAddress,
+  detectOtp,
+  isValidAliasLocalPart,
+  previewText
+} from "@/utils/email";
 
 export default function ThreadScreen() {
   const { threadId } = useLocalSearchParams<{ threadId: string }>();
@@ -25,14 +33,12 @@ export default function ThreadScreen() {
   const { client, domains } = useSession();
   const [messages, setMessages] = useState<EmailSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [replyLocalPart, setReplyLocalPart] = useState("support");
+  const [replyDomain, setReplyDomain] = useState("");
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const aliases = useMemo(
-    () => aliasOptions(domains.filter((domain) => domain.verified).map((domain) => domain.domain)),
-    [domains]
-  );
-  const replyFrom = aliases[0] ?? "";
+  const replyFrom = buildAliasAddress(replyLocalPart, replyDomain);
   const latestInbound = [...messages].reverse().find((email) => email.direction === "inbound");
   const subject = messages[0]?.subject ?? "Thread";
 
@@ -101,6 +107,7 @@ export default function ThreadScreen() {
           <Text className="text-sm text-zinc-400">{messages.length} messages</Text>
         </View>
       </View>
+      <InboundSetupBanner className="mx-5 mt-4" />
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
@@ -123,7 +130,14 @@ export default function ThreadScreen() {
               <Reply size={17} color="#2dd4bf" />
               <Text className="text-base font-bold text-zinc-50">Reply</Text>
             </View>
-            <Text className="text-sm text-zinc-400">From {replyFrom || "No alias"}</Text>
+            <SenderPicker
+              domains={domains}
+              localPart={replyLocalPart}
+              domain={replyDomain}
+              onLocalPartChange={setReplyLocalPart}
+              onDomainChange={setReplyDomain}
+              compact
+            />
             <Field
               label="Message"
               value={replyText}
@@ -136,7 +150,12 @@ export default function ThreadScreen() {
               label="Send reply"
               icon={Reply}
               loading={sending}
-              disabled={!replyText.trim() || !latestInbound || !replyFrom}
+              disabled={
+                !replyText.trim() ||
+                !latestInbound ||
+                !replyFrom ||
+                !isValidAliasLocalPart(replyLocalPart)
+              }
               onPress={handleReply}
             />
           </View>

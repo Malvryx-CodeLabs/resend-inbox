@@ -11,6 +11,7 @@ import { Inbox, RotateCw } from "lucide-react-native";
 import type { EmailSummary } from "@/api/types";
 import { EmailRow } from "@/components/EmailRow";
 import { EmptyState } from "@/components/EmptyState";
+import { InboundSetupBanner } from "@/components/InboundSetupBanner";
 import { StatusPill } from "@/components/StatusPill";
 import { useSession } from "@/context/SessionContext";
 
@@ -70,6 +71,7 @@ export default function InboxScreen() {
             tone={backendState?.health ? "ok" : "loading"}
           />
         </View>
+        <InboundSetupBanner />
         {error ? (
           <View className="flex-row items-center gap-2 rounded-lg border border-red-900 bg-red-950 px-3 py-2">
             <RotateCw size={16} color="#fb7185" />

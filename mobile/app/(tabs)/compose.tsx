@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   Text,
   View
@@ -10,16 +9,15 @@ import {
 import { SendHorizonal } from "lucide-react-native";
 import { Button } from "@/components/Button";
 import { Field } from "@/components/Field";
+import { InboundSetupBanner } from "@/components/InboundSetupBanner";
+import { SenderPicker } from "@/components/SenderPicker";
 import { useSession } from "@/context/SessionContext";
-import { aliasOptions } from "@/utils/email";
+import { buildAliasAddress, isValidAliasLocalPart } from "@/utils/email";
 
 export default function ComposeScreen() {
   const { client, domains } = useSession();
-  const aliases = useMemo(
-    () => aliasOptions(domains.filter((domain) => domain.verified).map((domain) => domain.domain)),
-    [domains]
-  );
-  const [from, setFrom] = useState(aliases[0] ?? "");
+  const [fromLocalPart, setFromLocalPart] = useState("hello");
+  const [fromDomain, setFromDomain] = useState("");
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -27,7 +25,13 @@ export default function ComposeScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const canSend = from && to.trim() && subject.trim() && message.trim();
+  const from = buildAliasAddress(fromLocalPart, fromDomain);
+  const canSend =
+    from &&
+    isValidAliasLocalPart(fromLocalPart) &&
+    to.trim() &&
+    subject.trim() &&
+    message.trim();
 
   async function handleSend() {
     if (!client || !canSend) {
@@ -72,36 +76,15 @@ export default function ComposeScreen() {
           </Text>
         </View>
 
-        <View className="gap-3">
-          <Text className="text-sm font-semibold text-zinc-50">From</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View className="flex-row gap-2">
-              {aliases.map((alias) => {
-                const active = alias === from;
+        <InboundSetupBanner />
 
-                return (
-                  <Pressable
-                    key={alias}
-                    onPress={() => setFrom(alias)}
-                    className={`rounded-lg border px-3 py-2 ${
-                      active
-                        ? "border-pine bg-pine"
-                        : "border-zinc-800 bg-zinc-950 active:bg-zinc-900"
-                    }`}
-                  >
-                    <Text
-                      className={`text-sm font-bold ${
-                        active ? "text-black" : "text-zinc-50"
-                      }`}
-                    >
-                      {alias}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </ScrollView>
-        </View>
+        <SenderPicker
+          domains={domains}
+          localPart={fromLocalPart}
+          domain={fromDomain}
+          onLocalPartChange={setFromLocalPart}
+          onDomainChange={setFromDomain}
+        />
 
         <Field label="To" value={to} onChangeText={setTo} keyboardType="email-address" />
         <Field label="Subject" value={subject} onChangeText={setSubject} />
