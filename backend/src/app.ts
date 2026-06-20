@@ -6,6 +6,7 @@ import { compatibilityRouter } from "./routes/compatibility.js";
 import { inboxRouter } from "./routes/inbox.js";
 import { mailRouter } from "./routes/mail.js";
 import { webhookRouter } from "./routes/webhook.js";
+import { webhookSetupRouter } from "./routes/webhookSetup.js";
 import { createErrorHandler } from "./middleware/errors.js";
 import type { AppDependencies } from "./types.js";
 
@@ -27,6 +28,7 @@ export function createApp(dependencies: AppDependencies): express.Express {
   app.use(webhookRouter(dependencies));
   app.use(express.json({ limit: "1mb" }));
   app.use(authRouter(dependencies));
+  app.use(webhookSetupRouter(dependencies));
   app.use(inboxRouter(dependencies));
   app.use(mailRouter(dependencies));
   app.use(createErrorHandler(dependencies.config));

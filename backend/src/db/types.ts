@@ -7,6 +7,7 @@ export interface UserDocument {
   email: string;
   apiKeyEncrypted: string;
   apiKeyFingerprint: string;
+  sessionTokenHash?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,4 +73,15 @@ export interface RateLimitDocument {
   count: number;
   windowStart: Date;
   expiresAt: Date;
+}
+
+export interface WebhookConfigDocument {
+  _id: ObjectId;
+  userId: ObjectId;
+  webhookId: string;
+  signingSecretEncrypted?: string;
+  enabled: boolean;
+  lastReceivedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }

@@ -9,7 +9,8 @@ import type {
   EmailDocument,
   RateLimitDocument,
   ThreadDocument,
-  UserDocument
+  UserDocument,
+  WebhookConfigDocument
 } from "./types.js";
 
 export interface Collections {
@@ -18,6 +19,7 @@ export interface Collections {
   emails: Collection<EmailDocument>;
   threads: Collection<ThreadDocument>;
   rateLimits: Collection<RateLimitDocument>;
+  webhookConfigs: Collection<WebhookConfigDocument>;
 }
 
 export interface Database {
@@ -51,13 +53,15 @@ export function getCollections(db: Db): Collections {
     domains: db.collection<DomainDocument>("domains"),
     emails: db.collection<EmailDocument>("emails"),
     threads: db.collection<ThreadDocument>("threads"),
-    rateLimits: db.collection<RateLimitDocument>("rate_limits")
+    rateLimits: db.collection<RateLimitDocument>("rate_limits"),
+    webhookConfigs: db.collection<WebhookConfigDocument>("webhook_configs")
   };
 }
 
 async function createIndexes(collections: Collections): Promise<void> {
   await Promise.all([
     collections.users.createIndex({ apiKeyFingerprint: 1 }, { unique: true }),
+    collections.users.createIndex({ sessionTokenHash: 1 }, { unique: true, sparse: true }),
     collections.users.createIndex({ email: 1 }),
     collections.domains.createIndex({ domain: 1 }, { unique: true }),
     collections.domains.createIndex({ userId: 1, domain: 1 }),
@@ -74,6 +78,8 @@ async function createIndexes(collections: Collections): Promise<void> {
       { unique: true }
     ),
     collections.rateLimits.createIndex({ key: 1 }, { unique: true }),
-    collections.rateLimits.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+    collections.rateLimits.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    collections.webhookConfigs.createIndex({ userId: 1 }, { unique: true }),
+    collections.webhookConfigs.createIndex({ webhookId: 1 }, { unique: true })
   ]);
 }

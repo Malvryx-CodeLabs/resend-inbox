@@ -5,7 +5,8 @@ import type {
   EmailDocument,
   RateLimitDocument,
   ThreadDocument,
-  UserDocument
+  UserDocument,
+  WebhookConfigDocument
 } from "../src/db/types.js";
 import type {
   ReceivedEmailContent,
@@ -21,7 +22,8 @@ type AnyDocument =
   | DomainDocument
   | EmailDocument
   | ThreadDocument
-  | RateLimitDocument;
+  | RateLimitDocument
+  | WebhookConfigDocument;
 
 type UpdateDocument = {
   $set?: Record<string, unknown>;
@@ -129,6 +131,24 @@ export class FakeCollection<T extends AnyDocument> {
     applyUpdate(existing, update, false);
     return existing;
   }
+
+  async deleteMany(filter: Filter<T>): Promise<{ deletedCount: number }> {
+    const before = this.documents.length;
+    const remaining = this.documents.filter((document) => !matches(document, filter));
+    this.documents.splice(0, this.documents.length, ...remaining);
+    return { deletedCount: before - remaining.length };
+  }
+
+  async deleteOne(filter: Filter<T>): Promise<{ deletedCount: number }> {
+    const index = this.documents.findIndex((document) => matches(document, filter));
+
+    if (index === -1) {
+      return { deletedCount: 0 };
+    }
+
+    this.documents.splice(index, 1);
+    return { deletedCount: 1 };
+  }
 }
 
 export class FakeResendClient implements ResendClient {
@@ -163,6 +183,7 @@ export function createTestDependencies(): AppDependencies & {
     emails: FakeCollection<EmailDocument>;
     threads: FakeCollection<ThreadDocument>;
     rateLimits: FakeCollection<RateLimitDocument>;
+    webhookConfigs: FakeCollection<WebhookConfigDocument>;
   };
   resendClient: FakeResendClient;
 } {
@@ -172,7 +193,8 @@ export function createTestDependencies(): AppDependencies & {
     domains: new FakeCollection<DomainDocument>(),
     emails: new FakeCollection<EmailDocument>(),
     threads: new FakeCollection<ThreadDocument>(),
-    rateLimits: new FakeCollection<RateLimitDocument>()
+    rateLimits: new FakeCollection<RateLimitDocument>(),
+    webhookConfigs: new FakeCollection<WebhookConfigDocument>()
   };
   const collections = fakeCollections as unknown as Collections;
 
@@ -183,6 +205,8 @@ export function createTestDependencies(): AppDependencies & {
       MONGODB_DB_NAME: "test",
       WEBHOOK_SECRET: "test_webhook_secret",
       API_KEY_ENCRYPTION_SECRET: "test-encryption-secret",
+      SERVER_REGISTRATION_KEY: "test-registration-key",
+      PUBLIC_BACKEND_URL: "https://api.resendinbox.qzz.io",
       SEND_RATE_LIMIT_WINDOW_MS: "60000",
       SEND_RATE_LIMIT_MAX: "30"
     }),

@@ -10,16 +10,16 @@ interface ButtonProps extends PressableProps {
 
 const variants = {
   primary: "bg-pine",
-  secondary: "bg-ink",
+  secondary: "bg-zinc-900",
   danger: "bg-flame",
-  ghost: "bg-transparent border border-line"
+  ghost: "bg-transparent border border-zinc-800"
 };
 
 const textVariants = {
-  primary: "text-white",
+  primary: "text-black",
   secondary: "text-white",
-  danger: "text-white",
-  ghost: "text-ink"
+  danger: "text-black",
+  ghost: "text-zinc-50"
 };
 
 export function Button({
@@ -43,11 +43,16 @@ export function Button({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator color={variant === "ghost" ? "#151714" : "#ffffff"} />
+        <ActivityIndicator
+          color={variant === "secondary" || variant === "ghost" ? "#f8fafc" : "#000000"}
+        />
       ) : (
         <>
           {Icon ? (
-            <Icon size={18} color={variant === "ghost" ? "#151714" : "#ffffff"} />
+            <Icon
+              size={18}
+              color={variant === "secondary" || variant === "ghost" ? "#f8fafc" : "#000000"}
+            />
           ) : null}
           <Text className={`text-base font-semibold ${textVariants[variant]}`}>
             {label}

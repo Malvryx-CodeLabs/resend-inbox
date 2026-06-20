@@ -56,12 +56,12 @@ export default function InboxScreen() {
   }, [load]);
 
   return (
-    <View className="flex-1 bg-paper">
-      <View className="gap-4 border-b border-line px-5 pb-4 pt-16">
+    <View className="flex-1 bg-black">
+      <View className="gap-4 border-b border-zinc-800 px-5 pb-4 pt-16">
         <View className="flex-row items-start justify-between gap-4">
           <View className="min-w-0 flex-1">
-            <Text className="text-3xl font-black text-ink">Inbox</Text>
-            <Text className="mt-1 text-sm text-zinc-600" numberOfLines={1}>
+            <Text className="text-3xl font-black text-zinc-50">Inbox</Text>
+            <Text className="mt-1 text-sm text-zinc-400" numberOfLines={1}>
               {domains.map((domain) => domain.domain).join(", ") || "No domains"}
             </Text>
           </View>
@@ -71,8 +71,8 @@ export default function InboxScreen() {
           />
         </View>
         {error ? (
-          <View className="flex-row items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
-            <RotateCw size={16} color="#d64a2f" />
+          <View className="flex-row items-center gap-2 rounded-lg border border-red-900 bg-red-950 px-3 py-2">
+            <RotateCw size={16} color="#fb7185" />
             <Text className="min-w-0 flex-1 text-sm font-semibold text-flame">
               {error}
             </Text>
@@ -82,7 +82,7 @@ export default function InboxScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#0f766e" />
+          <ActivityIndicator color="#2dd4bf" />
         </View>
       ) : (
         <FlatList
@@ -102,7 +102,7 @@ export default function InboxScreen() {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              tintColor="#0f766e"
+              tintColor="#2dd4bf"
               onRefresh={() => void load("refresh")}
             />
           }

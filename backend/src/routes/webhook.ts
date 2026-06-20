@@ -38,110 +38,70 @@ export function webhookRouter(dependencies: AppDependencies): Router {
   const router = Router();
 
   router.post(
+    "/webhook/resend/:webhookId",
+    raw({ type: "application/json", limit: "2mb" }),
+    async (request, response, next) => {
+      try {
+        const webhookConfig =
+          await dependencies.collections.webhookConfigs.findOne({
+            webhookId: request.params.webhookId,
+            enabled: true
+          });
+
+        if (!webhookConfig?.signingSecretEncrypted) {
+          response.status(404).json({
+            error: {
+              code: "webhook_not_found",
+              message: "Webhook is not configured"
+            }
+          });
+          return;
+        }
+
+        const signingSecret = decryptApiKey(
+          webhookConfig.signingSecretEncrypted,
+          dependencies.config.API_KEY_ENCRYPTION_SECRET
+        );
+        const event = inboundWebhookSchema.parse(
+          verifyWebhookPayload<unknown>(request, signingSecret)
+        );
+
+        await processInboundWebhook(
+          dependencies,
+          event,
+          webhookConfig.userId,
+          webhookConfig._id
+        );
+
+        response.status(202).json({ accepted: true });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  router.post(
     "/webhook/resend",
     raw({ type: "application/json", limit: "2mb" }),
     async (request, response, next) => {
       try {
+        if (!dependencies.config.WEBHOOK_SECRET) {
+          response.status(404).json({
+            error: {
+              code: "webhook_not_configured",
+              message: "Use the per-user webhook URL"
+            }
+          });
+          return;
+        }
+
         const event = inboundWebhookSchema.parse(
           verifyWebhookPayload<unknown>(
             request,
             dependencies.config.WEBHOOK_SECRET
           )
         );
-        const resendEmailId = event.data.email_id ?? event.data.id;
-
-        if (!resendEmailId) {
-          response.status(202).json({ accepted: true, ignored: true });
-          return;
-        }
-
-        const recipient = getPrimaryRecipient(event.data.to);
-
-        if (!recipient) {
-          response.status(202).json({ accepted: true, ignored: true });
-          return;
-        }
-
-        const domain = getDomainFromEmail(recipient);
-        const mappedDomain = await findInboundDomain(
-          dependencies.collections,
-          domain
-        );
-
-        if (!mappedDomain) {
-          response.status(202).json({ accepted: true, ignored: true });
-          return;
-        }
-
-        const user = await dependencies.collections.users.findOne({
-          _id: mappedDomain.userId
-        });
-
-        if (!user) {
-          response.status(202).json({ accepted: true, ignored: true });
-          return;
-        }
-
-        const apiKey = decryptApiKey(
-          user.apiKeyEncrypted,
-          dependencies.config.API_KEY_ENCRYPTION_SECRET
-        );
-        const receivedEmail =
-          await dependencies.resendClient.retrieveReceivedEmail(
-            apiKey,
-            resendEmailId
-          );
-        const createdAt = receivedEmail.createdAt ?? new Date();
-        const messageId =
-          receivedEmail.messageId ??
-          receivedEmail.headers["message-id"] ??
-          receivedEmail.headers["Message-ID"] ??
-          resendEmailId;
-        const threadId = await resolveInboundThreadId(
-          dependencies,
-          mappedDomain.userId,
-          receivedEmail.subject,
-          receivedEmail.from.email,
-          receivedEmail.to.map((address) => address.email),
-          [
-            ...parseReferences(receivedEmail.headers),
-            receivedEmail.headers["in-reply-to"],
-            receivedEmail.headers["In-Reply-To"]
-          ].filter(Boolean)
-        );
-        const email: EmailDocument = {
-          _id: new ObjectId(),
-          userId: mappedDomain.userId,
-          domain,
-          threadId,
-          messageId,
-          resendEmailId,
-          from: receivedEmail.from,
-          to: receivedEmail.to,
-          cc: receivedEmail.cc,
-          bcc: receivedEmail.bcc,
-          replyTo: receivedEmail.replyTo,
-          subject: receivedEmail.subject,
-          html: receivedEmail.html,
-          text: receivedEmail.text,
-          direction: "inbound",
-          headers: receivedEmail.headers,
-          attachments: receivedEmail.attachments,
-          createdAt,
-          updatedAt: new Date()
-        };
-
-        const insertResult = await dependencies.collections.emails.updateOne(
-          { userId: email.userId, messageId: email.messageId },
-          {
-            $setOnInsert: email
-          },
-          { upsert: true }
-        );
-
-        if (insertResult.upsertedId) {
-          await upsertThreadForEmail(dependencies.collections, email);
-        }
+        await processInboundWebhook(dependencies, event);
 
         response.status(202).json({ accepted: true });
       } catch (error) {
@@ -151,6 +111,117 @@ export function webhookRouter(dependencies: AppDependencies): Router {
   );
 
   return router;
+}
+
+async function processInboundWebhook(
+  dependencies: AppDependencies,
+  event: z.infer<typeof inboundWebhookSchema>,
+  expectedUserId?: ObjectId,
+  webhookConfigId?: ObjectId
+): Promise<void> {
+  const resendEmailId = event.data.email_id ?? event.data.id;
+
+  if (!resendEmailId) {
+    return;
+  }
+
+  const recipient = getPrimaryRecipient(event.data.to);
+
+  if (!recipient) {
+    return;
+  }
+
+  const domain = getDomainFromEmail(recipient);
+  const mappedDomain = await findInboundDomain(
+    dependencies.collections,
+    domain
+  );
+
+  if (!mappedDomain) {
+    return;
+  }
+
+  if (expectedUserId && !mappedDomain.userId.equals(expectedUserId)) {
+    return;
+  }
+
+  const user = await dependencies.collections.users.findOne({
+    _id: mappedDomain.userId
+  });
+
+  if (!user) {
+    return;
+  }
+
+  const apiKey = decryptApiKey(
+    user.apiKeyEncrypted,
+    dependencies.config.API_KEY_ENCRYPTION_SECRET
+  );
+  const receivedEmail =
+    await dependencies.resendClient.retrieveReceivedEmail(apiKey, resendEmailId);
+  const createdAt = receivedEmail.createdAt ?? new Date();
+  const messageId =
+    receivedEmail.messageId ??
+    receivedEmail.headers["message-id"] ??
+    receivedEmail.headers["Message-ID"] ??
+    resendEmailId;
+  const threadId = await resolveInboundThreadId(
+    dependencies,
+    mappedDomain.userId,
+    receivedEmail.subject,
+    receivedEmail.from.email,
+    receivedEmail.to.map((address) => address.email),
+    [
+      ...parseReferences(receivedEmail.headers),
+      receivedEmail.headers["in-reply-to"],
+      receivedEmail.headers["In-Reply-To"]
+    ].filter(Boolean)
+  );
+  const email: EmailDocument = {
+    _id: new ObjectId(),
+    userId: mappedDomain.userId,
+    domain,
+    threadId,
+    messageId,
+    resendEmailId,
+    from: receivedEmail.from,
+    to: receivedEmail.to,
+    cc: receivedEmail.cc,
+    bcc: receivedEmail.bcc,
+    replyTo: receivedEmail.replyTo,
+    subject: receivedEmail.subject,
+    html: receivedEmail.html,
+    text: receivedEmail.text,
+    direction: "inbound",
+    headers: receivedEmail.headers,
+    attachments: receivedEmail.attachments,
+    createdAt,
+    updatedAt: new Date()
+  };
+
+  const insertResult = await dependencies.collections.emails.updateOne(
+    { userId: email.userId, messageId: email.messageId },
+    {
+      $setOnInsert: email
+    },
+    { upsert: true }
+  );
+
+  if (insertResult.upsertedId) {
+    await upsertThreadForEmail(dependencies.collections, email);
+  }
+
+  if (webhookConfigId) {
+    await dependencies.collections.webhookConfigs.updateOne(
+      { _id: webhookConfigId },
+      {
+        $set: {
+          lastReceivedAt: new Date(),
+          updatedAt: new Date()
+        }
+      }
+    );
+  }
 }
 
 async function resolveInboundThreadId(

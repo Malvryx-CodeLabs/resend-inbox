@@ -59,21 +59,21 @@ export default function ComposeScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-paper"
+      className="flex-1 bg-black"
     >
       <ScrollView
         contentContainerClassName="gap-6 px-5 pb-10 pt-16"
         keyboardShouldPersistTaps="handled"
       >
         <View>
-          <Text className="text-3xl font-black text-ink">Compose</Text>
-          <Text className="mt-1 text-sm text-zinc-600">
+          <Text className="text-3xl font-black text-zinc-50">Compose</Text>
+          <Text className="mt-1 text-sm text-zinc-400">
             Send from a verified Resend domain alias.
           </Text>
         </View>
 
         <View className="gap-3">
-          <Text className="text-sm font-semibold text-ink">From</Text>
+          <Text className="text-sm font-semibold text-zinc-50">From</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View className="flex-row gap-2">
               {aliases.map((alias) => {
@@ -86,12 +86,12 @@ export default function ComposeScreen() {
                     className={`rounded-lg border px-3 py-2 ${
                       active
                         ? "border-pine bg-pine"
-                        : "border-line bg-white active:bg-mist"
+                        : "border-zinc-800 bg-zinc-950 active:bg-zinc-900"
                     }`}
                   >
                     <Text
                       className={`text-sm font-bold ${
-                        active ? "text-white" : "text-ink"
+                        active ? "text-black" : "text-zinc-50"
                       }`}
                     >
                       {alias}
@@ -115,12 +115,12 @@ export default function ComposeScreen() {
         />
 
         {notice ? (
-          <View className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <View className="rounded-lg border border-emerald-900 bg-emerald-950 px-4 py-3">
             <Text className="text-sm font-semibold text-pine">{notice}</Text>
           </View>
         ) : null}
         {error ? (
-          <View className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+          <View className="rounded-lg border border-red-900 bg-red-950 px-4 py-3">
             <Text className="text-sm font-semibold text-flame">{error}</Text>
           </View>
         ) : null}

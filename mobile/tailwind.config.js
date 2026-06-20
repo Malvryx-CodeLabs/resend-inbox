@@ -5,14 +5,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ink: "#151714",
-        paper: "#f7f7f2",
-        mist: "#e7ece8",
-        line: "#d7ddd7",
-        pine: "#0f766e",
-        flame: "#d64a2f",
-        gold: "#b0831c",
-        sky: "#2f6fbd"
+        ink: "#f8fafc",
+        paper: "#000000",
+        mist: "#18181b",
+        line: "#27272a",
+        pine: "#2dd4bf",
+        flame: "#fb7185",
+        gold: "#fbbf24",
+        sky: "#60a5fa"
       }
     }
   },

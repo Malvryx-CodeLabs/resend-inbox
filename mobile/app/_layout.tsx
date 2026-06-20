@@ -13,7 +13,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SessionProvider>
         <AuthGate />
-        <StatusBar style="dark" />
+        <StatusBar style="light" />
       </SessionProvider>
     </GestureHandlerRootView>
   );

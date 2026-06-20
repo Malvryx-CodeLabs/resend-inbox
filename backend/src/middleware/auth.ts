@@ -2,7 +2,8 @@ import type { NextFunction, Request, Response } from "express";
 import type { WithId } from "mongodb";
 import type { UserDocument } from "../db/types.js";
 import { unauthorized } from "../errors.js";
-import { fingerprintApiKey } from "../security/apiKeys.js";
+import { decryptApiKey } from "../security/apiKeys.js";
+import { hashToken } from "../security/tokens.js";
 import type { AppDependencies } from "../types.js";
 
 declare module "express-serve-static-core" {
@@ -10,6 +11,7 @@ declare module "express-serve-static-core" {
     auth?: {
       apiKey: string;
       user: WithId<UserDocument>;
+      sessionToken: string;
     };
   }
 }
@@ -17,25 +19,28 @@ declare module "express-serve-static-core" {
 export function requireAuth(dependencies: AppDependencies) {
   return async (request: Request, _response: Response, next: NextFunction) => {
     try {
-      const apiKey = getBearerToken(request);
+      const sessionToken = getBearerToken(request);
 
-      if (!apiKey) {
+      if (!sessionToken) {
         throw unauthorized();
       }
 
-      const fingerprint = fingerprintApiKey(
-        apiKey,
-        dependencies.config.API_KEY_ENCRYPTION_SECRET
-      );
       const user = await dependencies.collections.users.findOne({
-        apiKeyFingerprint: fingerprint
+        sessionTokenHash: hashToken(sessionToken)
       });
 
       if (!user) {
-        throw unauthorized("Invalid API key");
+        throw unauthorized("Invalid session");
       }
 
-      request.auth = { apiKey, user };
+      request.auth = {
+        apiKey: decryptApiKey(
+          user.apiKeyEncrypted,
+          dependencies.config.API_KEY_ENCRYPTION_SECRET
+        ),
+        user,
+        sessionToken
+      };
       next();
     } catch (error) {
       next(error);

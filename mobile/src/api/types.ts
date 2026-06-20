@@ -21,7 +21,18 @@ export interface DomainSummary {
   inbound_enabled: boolean;
 }
 
-export interface AuthValidateResponse {
+export interface WebhookSetup {
+  webhook_id: string;
+  url: string;
+  enabled: boolean;
+  configured: boolean;
+  last_received_at: string | null;
+}
+
+export interface CreateSessionResponse {
+  session: {
+    token: string;
+  };
   user: {
     id: string;
     email: string;
@@ -31,6 +42,18 @@ export interface AuthValidateResponse {
     display: string;
   };
   domains: DomainSummary[];
+}
+
+export interface MeResponse {
+  user: {
+    id: string;
+    email: string;
+  };
+  api_key: {
+    display: string;
+  };
+  domains: DomainSummary[];
+  webhook: WebhookSetup | null;
 }
 
 export interface EmailAddress {

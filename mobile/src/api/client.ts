@@ -1,14 +1,16 @@
 import type {
   ApiItem,
   ApiList,
-  AuthValidateResponse,
+  CreateSessionResponse,
   EmailSummary,
   HealthResponse,
+  MeResponse,
   MetaResponse,
-  ThreadSummary
+  ThreadSummary,
+  WebhookSetup
 } from "./types";
 
-export const hostedBackendUrl = "https://api.resend-inbox.dev";
+export const hostedBackendUrl = "https://api.resendinbox.qzz.io";
 
 export class ApiError extends Error {
   constructor(
@@ -41,10 +43,17 @@ export async function checkBackend(baseUrl: string): Promise<{
   meta: MetaResponse;
 }> {
   const normalized = normalizeBackendUrl(baseUrl);
-  const [health, meta] = await Promise.all([
-    request<HealthResponse>(normalized, "/health"),
-    request<MetaResponse>(normalized, "/meta")
-  ]);
+  let health: HealthResponse;
+  let meta: MetaResponse;
+
+  try {
+    [health, meta] = await Promise.all([
+      request<HealthResponse>(normalized, "/health"),
+      request<MetaResponse>(normalized, "/meta")
+    ]);
+  } catch {
+    throw new Error("This is not a compatible Resend Inbox backend");
+  }
 
   if (
     health.status !== "ok" ||
@@ -60,37 +69,62 @@ export async function checkBackend(baseUrl: string): Promise<{
   return { health, meta };
 }
 
-export async function validateApiKey(
+export async function createSession(
   baseUrl: string,
-  apiKey: string
-): Promise<AuthValidateResponse> {
-  return request<AuthValidateResponse>(baseUrl, "/auth/validate", {
+  input: {
+    apiKey: string;
+    registrationKey: string;
+  }
+): Promise<CreateSessionResponse> {
+  return request<CreateSessionResponse>(baseUrl, "/sessions", {
     method: "POST",
     body: {
-      api_key: apiKey
+      api_key: input.apiKey,
+      registration_key: input.registrationKey
     }
   });
 }
 
-export function createInboxClient(baseUrl: string, apiKey: string) {
+export function createInboxClient(baseUrl: string, sessionToken: string) {
   return {
+    getMe: () =>
+      request<MeResponse>(baseUrl, "/me", {
+        sessionToken
+      }),
+    deleteAccount: () =>
+      request<void>(baseUrl, "/me", {
+        method: "DELETE",
+        sessionToken
+      }),
+    getWebhookSetup: () =>
+      request<ApiItem<WebhookSetup>>(baseUrl, "/webhooks/setup", {
+        sessionToken
+      }),
+    saveWebhookSecret: (signingSecret: string) =>
+      request<ApiItem<WebhookSetup>>(baseUrl, "/webhooks/setup", {
+        method: "POST",
+        sessionToken,
+        body: {
+          signing_secret: signingSecret
+        }
+      }),
     listEmails: () =>
       request<ApiList<EmailSummary>>(baseUrl, "/emails", {
-        apiKey
+        sessionToken
       }),
     getEmail: (id: string) =>
       request<ApiItem<EmailSummary>>(baseUrl, `/emails/${encodeURIComponent(id)}`, {
-        apiKey
+        sessionToken
       }),
     listThreads: () =>
       request<ApiList<ThreadSummary>>(baseUrl, "/threads", {
-        apiKey
+        sessionToken
       }),
     listThreadEmails: (threadId: string) =>
       request<ApiList<EmailSummary>>(
         baseUrl,
         `/threads/${encodeURIComponent(threadId)}/emails`,
-        { apiKey }
+        { sessionToken }
       ),
     send: (payload: {
       from: string;
@@ -100,13 +134,13 @@ export function createInboxClient(baseUrl: string, apiKey: string) {
     }) =>
       request<{ id: string; data: EmailSummary }>(baseUrl, "/send", {
         method: "POST",
-        apiKey,
+        sessionToken,
         body: payload
       }),
     reply: (payload: { email_id: string; from: string; text: string }) =>
       request<{ id: string; data: EmailSummary }>(baseUrl, "/reply", {
         method: "POST",
-        apiKey,
+        sessionToken,
         body: payload
       })
   };
@@ -116,8 +150,8 @@ async function request<T>(
   baseUrl: string,
   path: string,
   options: {
-    method?: "GET" | "POST";
-    apiKey?: string;
+    method?: "GET" | "POST" | "DELETE";
+    sessionToken?: string;
     body?: unknown;
   } = {}
 ): Promise<T> {
@@ -126,7 +160,7 @@ async function request<T>(
     headers: {
       accept: "application/json",
       ...(options.body ? { "content-type": "application/json" } : {}),
-      ...(options.apiKey ? { authorization: `Bearer ${options.apiKey}` } : {})
+      ...(options.sessionToken ? { authorization: `Bearer ${options.sessionToken}` } : {})
     },
     body: options.body ? JSON.stringify(options.body) : undefined
   });

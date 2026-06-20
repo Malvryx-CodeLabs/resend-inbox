@@ -84,27 +84,27 @@ export default function ThreadScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-paper"
+      className="flex-1 bg-black"
     >
       <Stack.Screen options={{ headerShown: false }} />
-      <View className="flex-row items-center gap-3 border-b border-line px-5 pb-4 pt-14">
+      <View className="flex-row items-center gap-3 border-b border-zinc-800 px-5 pb-4 pt-14">
         <Pressable
           onPress={() => router.back()}
-          className="h-10 w-10 items-center justify-center rounded-lg bg-white active:bg-mist"
+          className="h-10 w-10 items-center justify-center rounded-lg bg-zinc-950 active:bg-zinc-900"
         >
-          <ArrowLeft size={22} color="#151714" />
+          <ArrowLeft size={22} color="#f8fafc" />
         </Pressable>
         <View className="min-w-0 flex-1">
-          <Text className="text-lg font-black text-ink" numberOfLines={1}>
+          <Text className="text-lg font-black text-zinc-50" numberOfLines={1}>
             {subject || "No subject"}
           </Text>
-          <Text className="text-sm text-zinc-600">{messages.length} messages</Text>
+          <Text className="text-sm text-zinc-400">{messages.length} messages</Text>
         </View>
       </View>
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#0f766e" />
+          <ActivityIndicator color="#2dd4bf" />
         </View>
       ) : (
         <ScrollView contentContainerClassName="gap-4 px-5 py-5">
@@ -113,17 +113,17 @@ export default function ThreadScreen() {
           ))}
 
           {error ? (
-            <View className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <View className="rounded-lg border border-red-900 bg-red-950 px-4 py-3">
               <Text className="text-sm font-semibold text-flame">{error}</Text>
             </View>
           ) : null}
 
-          <View className="gap-3 rounded-lg border border-line bg-white p-4">
+          <View className="gap-3 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
             <View className="flex-row items-center gap-2">
-              <Reply size={17} color="#0f766e" />
-              <Text className="text-base font-bold text-ink">Reply</Text>
+              <Reply size={17} color="#2dd4bf" />
+              <Text className="text-base font-bold text-zinc-50">Reply</Text>
             </View>
-            <Text className="text-sm text-zinc-600">From {replyFrom || "No alias"}</Text>
+            <Text className="text-sm text-zinc-400">From {replyFrom || "No alias"}</Text>
             <Field
               label="Message"
               value={replyText}
@@ -154,12 +154,12 @@ function MessageBubble({ message }: { message: EmailSummary }) {
   return (
     <View
       className={`gap-3 rounded-lg border p-4 ${
-        isOutbound ? "border-blue-100 bg-blue-50" : "border-line bg-white"
+        isOutbound ? "border-sky-900 bg-sky-950" : "border-zinc-800 bg-zinc-950"
       }`}
     >
       <View className="flex-row items-start justify-between gap-3">
         <View className="min-w-0 flex-1">
-          <Text className="text-sm font-bold text-ink" numberOfLines={1}>
+          <Text className="text-sm font-bold text-zinc-50" numberOfLines={1}>
             {isOutbound
               ? `You to ${message.to[0]?.email ?? "recipient"}`
               : addressLabel(message.from)}
@@ -168,15 +168,15 @@ function MessageBubble({ message }: { message: EmailSummary }) {
             {formatLongDate(message.created_at)}
           </Text>
         </View>
-        <Text className="rounded-full bg-mist px-2 py-1 text-xs font-bold text-ink">
+        <Text className="rounded-full bg-zinc-900 px-2 py-1 text-xs font-bold text-zinc-50">
           {message.direction}
         </Text>
       </View>
 
       {otp ? (
         <View className="flex-row items-center gap-2 rounded-lg bg-gold/10 px-3 py-2">
-          <ShieldCheck size={16} color="#b0831c" />
-          <Text className="text-sm font-black text-ink">Code {otp}</Text>
+          <ShieldCheck size={16} color="#fbbf24" />
+          <Text className="text-sm font-black text-zinc-50">Code {otp}</Text>
         </View>
       ) : null}
 
@@ -185,22 +185,22 @@ function MessageBubble({ message }: { message: EmailSummary }) {
           contentWidth={width - 72}
           source={{ html: message.html }}
           baseStyle={{
-            color: "#151714",
+            color: "#f8fafc",
             fontSize: 16,
             lineHeight: 24
           }}
           tagsStyles={{
-            a: { color: "#0f766e", fontWeight: "700" },
+            a: { color: "#2dd4bf", fontWeight: "700" },
             p: { marginBottom: 10 },
             code: {
-              backgroundColor: "#e7ece8",
+              backgroundColor: "#18181b",
               borderRadius: 6,
               paddingHorizontal: 4
             }
           }}
         />
       ) : (
-        <Text className="text-base leading-6 text-ink">{previewText(message)}</Text>
+        <Text className="text-base leading-6 text-zinc-50">{previewText(message)}</Text>
       )}
     </View>
   );
