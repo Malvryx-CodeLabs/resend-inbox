@@ -147,6 +147,7 @@ export function authRouter(dependencies: AppDependencies): Router {
         dependencies.collections.threads.deleteMany({ userId }),
         dependencies.collections.domains.deleteMany({ userId }),
         dependencies.collections.webhookConfigs.deleteMany({ userId }),
+        dependencies.collections.deviceTokens.deleteMany({ userId }),
         dependencies.collections.rateLimits.deleteMany({
           key: `send:${userId.toHexString()}`
         }),

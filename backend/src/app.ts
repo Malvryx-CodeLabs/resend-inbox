@@ -3,6 +3,7 @@ import express from "express";
 import helmet from "helmet";
 import { authRouter } from "./routes/auth.js";
 import { compatibilityRouter } from "./routes/compatibility.js";
+import { devicesRouter } from "./routes/devices.js";
 import { inboxRouter } from "./routes/inbox.js";
 import { mailRouter } from "./routes/mail.js";
 import { webhookRouter } from "./routes/webhook.js";
@@ -24,10 +25,11 @@ export function createApp(dependencies: AppDependencies): express.Express {
     })
   );
 
-  app.use(compatibilityRouter());
+  app.use(compatibilityRouter(dependencies));
   app.use(webhookRouter(dependencies));
   app.use(express.json({ limit: "1mb" }));
   app.use(authRouter(dependencies));
+  app.use(devicesRouter(dependencies));
   app.use(webhookSetupRouter(dependencies));
   app.use(inboxRouter(dependencies));
   app.use(mailRouter(dependencies));

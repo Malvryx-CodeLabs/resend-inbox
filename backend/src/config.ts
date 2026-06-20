@@ -15,7 +15,12 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().min(1).optional(),
   ALLOWED_ORIGINS: z.string().optional(),
   SEND_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
-  SEND_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30)
+  SEND_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  FIREBASE_PROJECT_ID: z.string().min(1).optional(),
+  FIREBASE_CLIENT_EMAIL: z.string().email().optional(),
+  FIREBASE_PRIVATE_KEY: z.string().min(1).optional(),
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().min(1).optional(),
+  GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1).optional()
 });
 
 export type AppConfig = z.infer<typeof envSchema> & {

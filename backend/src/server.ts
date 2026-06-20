@@ -1,14 +1,20 @@
 import { loadConfig } from "./config.js";
 import { createApp } from "./app.js";
 import { connectDatabase } from "./db/mongo.js";
+import { createNotificationService } from "./services/notifications.js";
 import { HttpResendClient } from "./services/resendClient.js";
 
 const config = loadConfig();
 const database = await connectDatabase(config.MONGODB_URI, config.MONGODB_DB_NAME);
+const notificationService = createNotificationService(
+  config,
+  database.collections
+);
 const app = createApp({
   config,
   collections: database.collections,
-  resendClient: new HttpResendClient()
+  resendClient: new HttpResendClient(),
+  notificationService
 });
 
 const server = app.listen(config.PORT, () => {

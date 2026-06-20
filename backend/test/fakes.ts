@@ -1,6 +1,7 @@
 import { ObjectId, type Filter, type OptionalUnlessRequiredId, type WithId } from "mongodb";
 import type { Collections } from "../src/db/mongo.js";
 import type {
+  DeviceTokenDocument,
   DomainDocument,
   EmailDocument,
   RateLimitDocument,
@@ -20,6 +21,7 @@ import { loadConfig } from "../src/config.js";
 
 type AnyDocument =
   | UserDocument
+  | DeviceTokenDocument
   | DomainDocument
   | EmailDocument
   | ThreadDocument
@@ -195,17 +197,21 @@ export function createTestDependencies(): AppDependencies & {
     emails: FakeCollection<EmailDocument>;
     threads: FakeCollection<ThreadDocument>;
     rateLimits: FakeCollection<RateLimitDocument>;
+    deviceTokens: FakeCollection<DeviceTokenDocument>;
     webhookConfigs: FakeCollection<WebhookConfigDocument>;
   };
   resendClient: FakeResendClient;
+  notificationService: FakeNotificationService;
 } {
   const resendClient = new FakeResendClient();
+  const notificationService = new FakeNotificationService();
   const fakeCollections = {
     users: new FakeCollection<UserDocument>(),
     domains: new FakeCollection<DomainDocument>(),
     emails: new FakeCollection<EmailDocument>(),
     threads: new FakeCollection<ThreadDocument>(),
     rateLimits: new FakeCollection<RateLimitDocument>(),
+    deviceTokens: new FakeCollection<DeviceTokenDocument>(),
     webhookConfigs: new FakeCollection<WebhookConfigDocument>()
   };
   const collections = fakeCollections as unknown as Collections;
@@ -224,8 +230,18 @@ export function createTestDependencies(): AppDependencies & {
     }),
     collections,
     fakeCollections,
-    resendClient
+    resendClient,
+    notificationService
   };
+}
+
+export class FakeNotificationService {
+  configured = true;
+  inboundEmails: EmailDocument[] = [];
+
+  async sendInboundEmailNotification(email: EmailDocument): Promise<void> {
+    this.inboundEmails.push(email);
+  }
 }
 
 function applyUpdate<T extends AnyDocument>(

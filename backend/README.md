@@ -15,6 +15,18 @@ Copy `.env.example` to `.env` and set:
 
 `SERVER_REGISTRATION_KEY` controls who can register mobile sessions on this backend. For self-hosted deployments, keep it private and share it only with users allowed to use your server.
 
+## Push Notifications
+
+Android push uses direct Firebase Cloud Messaging from this backend. The mobile app uses `mobile/google-services.json` to register for a native FCM token. The backend also needs Firebase Admin credentials before it can send notifications.
+
+Set one of these on the backend:
+
+- `FIREBASE_SERVICE_ACCOUNT_JSON` containing the full Firebase service-account JSON
+- `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`
+- `GOOGLE_APPLICATION_CREDENTIALS` pointing to a service-account JSON file on the server
+
+If Firebase Admin credentials are missing, the backend stays online and `/meta` reports `features.push: false`.
+
 ## Scripts
 
 ```sh

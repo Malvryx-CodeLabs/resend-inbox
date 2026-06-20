@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { serviceMeta, serviceVersion } from "../constants.js";
+import type { AppDependencies } from "../types.js";
 
-export function compatibilityRouter(): Router {
+export function compatibilityRouter(dependencies: AppDependencies): Router {
   const router = Router();
 
   router.get("/", (_request, response) => {
@@ -25,7 +26,13 @@ export function compatibilityRouter(): Router {
   });
 
   router.get("/meta", (_request, response) => {
-    response.json(serviceMeta);
+    response.json({
+      ...serviceMeta,
+      features: {
+        ...serviceMeta.features,
+        push: dependencies.notificationService.configured
+      }
+    });
   });
 
   return router;

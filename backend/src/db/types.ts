@@ -78,6 +78,17 @@ export interface RateLimitDocument {
   expiresAt: Date;
 }
 
+export interface DeviceTokenDocument {
+  _id: ObjectId;
+  userId: ObjectId;
+  token: string;
+  platform: "android";
+  deviceName?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  lastSeenAt: Date;
+}
+
 export interface WebhookConfigDocument {
   _id: ObjectId;
   userId: ObjectId;

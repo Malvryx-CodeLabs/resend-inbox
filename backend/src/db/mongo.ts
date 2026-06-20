@@ -5,6 +5,7 @@ import {
   type MongoClientOptions
 } from "mongodb";
 import type {
+  DeviceTokenDocument,
   DomainDocument,
   EmailDocument,
   RateLimitDocument,
@@ -19,6 +20,7 @@ export interface Collections {
   emails: Collection<EmailDocument>;
   threads: Collection<ThreadDocument>;
   rateLimits: Collection<RateLimitDocument>;
+  deviceTokens: Collection<DeviceTokenDocument>;
   webhookConfigs: Collection<WebhookConfigDocument>;
 }
 
@@ -54,6 +56,7 @@ export function getCollections(db: Db): Collections {
     emails: db.collection<EmailDocument>("emails"),
     threads: db.collection<ThreadDocument>("threads"),
     rateLimits: db.collection<RateLimitDocument>("rate_limits"),
+    deviceTokens: db.collection<DeviceTokenDocument>("device_tokens"),
     webhookConfigs: db.collection<WebhookConfigDocument>("webhook_configs")
   };
 }
@@ -79,6 +82,8 @@ async function createIndexes(collections: Collections): Promise<void> {
     ),
     collections.rateLimits.createIndex({ key: 1 }, { unique: true }),
     collections.rateLimits.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    collections.deviceTokens.createIndex({ userId: 1, token: 1 }, { unique: true }),
+    collections.deviceTokens.createIndex({ token: 1 }),
     collections.webhookConfigs.createIndex({ userId: 1 }, { unique: true }),
     collections.webhookConfigs.createIndex({ webhookId: 1 }, { unique: true })
   ]);

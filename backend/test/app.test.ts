@@ -45,7 +45,8 @@ describe("compatibility endpoints", () => {
         expect(body.features).toEqual({
           send: true,
           inbound: true,
-          threads: true
+          threads: true,
+          push: true
         });
       });
   });
@@ -333,6 +334,8 @@ describe("webhook setup and delivery", () => {
     expect(dependencies.fakeCollections.emails.documents).toHaveLength(1);
     expect(dependencies.fakeCollections.emails.documents[0].userId.equals(seeded.userId)).toBe(true);
     expect(dependencies.fakeCollections.webhookConfigs.documents[0].lastReceivedAt).toBeInstanceOf(Date);
+    expect(dependencies.notificationService.inboundEmails).toHaveLength(1);
+    expect(dependencies.notificationService.inboundEmails[0].subject).toBe("Hello");
   });
 
   it("returns a signed download URL for inbound attachments", async () => {
@@ -378,6 +381,38 @@ describe("webhook setup and delivery", () => {
   });
 });
 
+describe("device notifications", () => {
+  it("registers and removes Android FCM device tokens for the authenticated user", async () => {
+    const dependencies = createTestDependencies();
+    const seeded = await seedUser(dependencies, "re_test_secret", "example.com");
+    const app = createApp(dependencies);
+
+    await request(app)
+      .post("/devices")
+      .set("authorization", `Bearer ${seeded.sessionToken}`)
+      .send({
+        token: "fcm_test_token_abcdefghijklmnopqrstuvwxyz",
+        platform: "android",
+        device_name: "Pixel"
+      })
+      .expect(204);
+
+    expect(dependencies.fakeCollections.deviceTokens.documents).toHaveLength(1);
+    expect(dependencies.fakeCollections.deviceTokens.documents[0]).toMatchObject({
+      token: "fcm_test_token_abcdefghijklmnopqrstuvwxyz",
+      platform: "android",
+      deviceName: "Pixel"
+    });
+
+    await request(app)
+      .delete("/devices/fcm_test_token_abcdefghijklmnopqrstuvwxyz")
+      .set("authorization", `Bearer ${seeded.sessionToken}`)
+      .expect(204);
+
+    expect(dependencies.fakeCollections.deviceTokens.documents).toHaveLength(0);
+  });
+});
+
 describe("account deletion", () => {
   it("removes the user and all tenant-scoped data from the server", async () => {
     const dependencies = createTestDependencies();
@@ -413,6 +448,16 @@ describe("account deletion", () => {
       createdAt: now,
       updatedAt: now
     });
+    await dependencies.collections.deviceTokens.insertOne({
+      _id: new ObjectId(),
+      userId: seeded.userId,
+      token: "fcm_test_token_abcdefghijklmnopqrstuvwxyz",
+      platform: "android",
+      deviceName: "Pixel",
+      createdAt: now,
+      updatedAt: now,
+      lastSeenAt: now
+    });
 
     await request(createApp(dependencies))
       .delete("/me")
@@ -423,6 +468,7 @@ describe("account deletion", () => {
     expect(dependencies.fakeCollections.domains.documents).toHaveLength(0);
     expect(dependencies.fakeCollections.emails.documents).toHaveLength(0);
     expect(dependencies.fakeCollections.threads.documents).toHaveLength(0);
+    expect(dependencies.fakeCollections.deviceTokens.documents).toHaveLength(0);
   });
 });
 

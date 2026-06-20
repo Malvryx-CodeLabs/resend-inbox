@@ -209,6 +209,7 @@ async function processInboundWebhook(
 
   if (insertResult.upsertedId) {
     await upsertThreadForEmail(dependencies.collections, email);
+    await dependencies.notificationService.sendInboundEmailNotification(email);
   }
 
   if (webhookConfigId) {
