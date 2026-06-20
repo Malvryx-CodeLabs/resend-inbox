@@ -12,6 +12,15 @@ describe("compatibility endpoints", () => {
     const app = createApp(createTestDependencies());
 
     await request(app)
+      .get("/")
+      .expect(200)
+      .expect("content-type", /html/)
+      .expect(({ text }) => {
+        expect(text).toContain("Resend Inbox Backend");
+        expect(text).toContain("Backend Online");
+      });
+
+    await request(app)
       .get("/health")
       .expect(200)
       .expect(({ body }) => {
@@ -20,6 +29,13 @@ describe("compatibility endpoints", () => {
           service: "resend-inbox-backend",
           version: "1.0.0"
         });
+      });
+
+    await request(app)
+      .get("/ready")
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.status).toBe("ok");
       });
 
     await request(app)
