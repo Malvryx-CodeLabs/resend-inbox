@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "567020453649",
+    "project_id": "resend-inbox",
+    "storage_bucket": "resend-inbox.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:567020453649:android:cfe66398576f536a0fd6b0",
+        "android_client_info": {
+          "package_name": "com.malvryx.resendinbox"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnmgv4Zz4Wgb0g87kFvmUqaXiENhCGLh0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
