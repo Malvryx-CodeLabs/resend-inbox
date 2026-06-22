@@ -11,6 +11,7 @@ import type { Filter, WithId } from "mongodb";
 import type { AppConfig } from "../config.js";
 import type { Collections } from "../db/mongo.js";
 import type { DeviceTokenDocument, EmailDocument } from "../db/types.js";
+import { detectOtp, previewEmailText } from "../utils/email.js";
 
 const copyCodeCategory = "copy_code";
 
@@ -44,11 +45,11 @@ export class FirebaseNotificationService implements NotificationService {
       return;
     }
 
-    const otp = detectOtp([email.text, stripHtml(email.html)].filter(Boolean).join(" "));
+    const otp = detectOtp(email);
     const recipient = email.to[0]?.email ?? email.domain;
     const body = otp
       ? `Code detected from ${email.from.email} for ${recipient}`
-      : previewText(email);
+      : previewEmailText(email);
     const data = cleanData({
       type: "inbound_email",
       email_id: email._id.toHexString(),
@@ -176,22 +177,4 @@ function isInvalidTokenError(result: PromiseSettledResult<string>): boolean {
     "messaging/invalid-registration-token",
     "messaging/registration-token-not-registered"
   ].includes(error.code ?? "");
-}
-
-function detectOtp(value: string): string | null {
-  const match = value.match(/\b\d{4,8}\b/);
-  return match?.[0] ?? null;
-}
-
-function previewText(email: EmailDocument): string {
-  return [email.text, stripHtml(email.html)]
-    .filter(Boolean)
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 160) || `New message from ${email.from.email}`;
-}
-
-function stripHtml(value: string | undefined): string {
-  return value?.replace(/<[^>]*>/g, " ") ?? "";
 }

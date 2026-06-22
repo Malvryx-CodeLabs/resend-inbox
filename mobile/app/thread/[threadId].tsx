@@ -11,7 +11,7 @@ import {
   View
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import RenderHtml from "react-native-render-html";
+import RenderHtml, { HTMLElementModel, HTMLContentModel } from "react-native-render-html";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Copy, Paperclip, Reply, ShieldCheck, X } from "lucide-react-native";
 import type { EmailSummary } from "@/api/types";
@@ -233,7 +233,7 @@ function MessageBubble({ message }: { message: EmailSummary }) {
   const { showToast } = useToast();
   const t = themed(isDark);
   const isOutbound = message.direction === "outbound";
-  const otp = detectOtp(message.text);
+  const otp = detectOtp(message);
   const { width } = useWindowDimensions();
 
   async function copyCode() {
@@ -334,6 +334,7 @@ function MessageBubble({ message }: { message: EmailSummary }) {
         <RenderHtml
           contentWidth={width - 72}
           source={{ html: message.html }}
+          customHTMLElementModels={emailHTMLElementModels}
           baseStyle={{
             color: isDark ? "#f8fafc" : "#18181b",
             fontSize: 16,
@@ -341,7 +342,18 @@ function MessageBubble({ message }: { message: EmailSummary }) {
           }}
           tagsStyles={{
             a: { color: "#2dd4bf", fontWeight: "700" },
+            blockquote: {
+              borderLeftColor: isDark ? "#3f3f46" : "#d4d4d8",
+              borderLeftWidth: 3,
+              marginLeft: 0,
+              paddingLeft: 12
+            },
+            center: { textAlign: "center" },
+            img: { marginVertical: 8 },
             p: { marginBottom: 10 },
+            table: { maxWidth: "100%" },
+            td: { padding: 4 },
+            th: { padding: 4 },
             code: {
               backgroundColor: "#18181b",
               borderRadius: 6,
@@ -355,3 +367,17 @@ function MessageBubble({ message }: { message: EmailSummary }) {
     </View>
   );
 }
+
+const emailHTMLElementModels = {
+  center: HTMLElementModel.fromCustomModel({
+    tagName: "center",
+    contentModel: HTMLContentModel.block,
+    mixedUAStyles: {
+      textAlign: "center"
+    }
+  }),
+  font: HTMLElementModel.fromCustomModel({
+    tagName: "font",
+    contentModel: HTMLContentModel.mixed
+  })
+};

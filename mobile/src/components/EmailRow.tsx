@@ -16,7 +16,7 @@ export function EmailRow({ email, onPress }: EmailRowProps) {
   const { isDark } = useTheme();
   const { showToast } = useToast();
   const isOutbound = email.direction === "outbound";
-  const code = detectOtp(email.text);
+  const code = detectOtp(email);
 
   async function copyCode() {
     if (!code) {
