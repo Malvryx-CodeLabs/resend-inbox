@@ -98,6 +98,21 @@ export function createInboxClient(baseUrl: string, sessionToken: string) {
         method: "DELETE",
         sessionToken
       }),
+    registerDevice: (payload: {
+      token: string;
+      platform: "android";
+      device_name?: string;
+    }) =>
+      request<void>(baseUrl, "/devices", {
+        method: "POST",
+        sessionToken,
+        body: payload
+      }),
+    removeDevice: (token: string) =>
+      request<void>(baseUrl, `/devices/${encodeURIComponent(token)}`, {
+        method: "DELETE",
+        sessionToken
+      }),
     getWebhookSetup: () =>
       request<ApiItem<WebhookSetup>>(baseUrl, "/webhooks/setup", {
         sessionToken

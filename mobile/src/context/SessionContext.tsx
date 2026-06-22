@@ -15,6 +15,10 @@ import {
 } from "@/api/client";
 import type { DomainSummary, HealthResponse, MetaResponse, WebhookSetup } from "@/api/types";
 import {
+  registerForBackendPush,
+  removeBackendPushToken
+} from "@/services/notifications";
+import {
   clearSession,
   loadStoredSession,
   saveBackendUrl,
@@ -61,6 +65,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const [domains, setDomains] = useState<DomainSummary[]>([]);
   const [webhook, setWebhook] = useState<WebhookSetup | null>(null);
   const [backendState, setBackendState] = useState<BackendState | null>(null);
+  const [pushToken, setPushToken] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -142,6 +147,26 @@ export function SessionProvider({ children }: PropsWithChildren) {
     return createInboxClient(backendUrl, sessionToken);
   }, [backendUrl, sessionToken]);
 
+  useEffect(() => {
+    if (status !== "signed_in" || !client) {
+      return;
+    }
+
+    let cancelled = false;
+
+    registerForBackendPush(client)
+      .then((token) => {
+        if (!cancelled && token) {
+          setPushToken(token);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client, status]);
+
   const prepareWebhook = useCallback(async () => {
     if (!client) {
       throw new Error("Session is not ready");
@@ -189,6 +214,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   );
 
   const reset = useCallback(async () => {
+    await removeBackendPushToken(client, pushToken).catch(() => {});
     await clearSession();
     setStatus("signed_out");
     setBackendUrl(null);
@@ -197,7 +223,8 @@ export function SessionProvider({ children }: PropsWithChildren) {
     setDomains([]);
     setWebhook(null);
     setBackendState(null);
-  }, []);
+    setPushToken(null);
+  }, [client, pushToken]);
 
   const deleteAccount = useCallback(async () => {
     if (client) {
@@ -212,6 +239,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     setDomains([]);
     setWebhook(null);
     setBackendState(null);
+    setPushToken(null);
   }, [client]);
 
   const value = useMemo<SessionContextValue>(

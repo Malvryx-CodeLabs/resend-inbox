@@ -7,6 +7,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SessionProvider, useSession } from "@/context/SessionContext";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import { ToastProvider } from "@/context/ToastContext";
+import {
+  configureNotificationInteractions,
+  listenForNotificationResponses
+} from "@/services/notifications";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -29,6 +33,15 @@ function AuthGate() {
   const { status } = useSession();
   const segments = useSegments();
   const router = useRouter();
+
+  useEffect(() => {
+    void configureNotificationInteractions();
+    const subscription = listenForNotificationResponses();
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (status === "loading") {

@@ -11,6 +11,7 @@ export interface MetaResponse {
     send: boolean;
     inbound: boolean;
     threads: boolean;
+    push?: boolean;
   };
 }
 

@@ -97,9 +97,8 @@ com.malvryx.resendinbox
 
 ## Push Notifications
 
-Push notifications are intentionally not configured yet. Before implementing Firebase Cloud Messaging, provide:
+Push notifications use native Android FCM through `expo-notifications`; no Expo push service is used.
 
-- `google-services.json` for `com.malvryx.resendinbox`
-- Firebase project ID
-- Firebase sender ID / project number
-- Whether notifications should be direct FCM from the backend or app-local only
+- `mobile/google-services.json` must exist and must target `com.malvryx.resendinbox`.
+- The backend must be configured with Firebase Admin credentials.
+- After changing notification or Firebase config, run `npm run android:prebuild` before building the APK.
