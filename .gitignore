@@ -159,3 +159,5 @@ mobile/android/app/*.keystore
 mobile/android/app/*.jks
 mobile/google-services.json
 mobile/android/app/google-services.json
+Malvryx-CodeLabs.jks
+keystore.b64
